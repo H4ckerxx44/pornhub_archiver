@@ -5,26 +5,31 @@ import pathlib
 import db
 from archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
 from channel import Channel
-from db import DB_HOST, DB_PORT
+from db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
+
+os.environ["OPENSSL_CONF"] = "/dev/null"
 
 ROOT_PATH = pathlib.Path("/data")
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
+OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
 
 MAJOR = 1
-MINOR = 4
+MINOR = 6
 PATCH = 0
 
 # ROOT_PATH = pathlib.Path("F:/auto_dl")
 # SLEEP_INTERVAL = 3600
 
 async def main():
-    await asyncio.sleep(0)
     print(f"system - running version v{MAJOR}.{MINOR}.{PATCH}")
+    print(f"system - OPENSSL_CONF={OPENSSL_CONF}")
     print(f"system - ROOT_PATH={ROOT_PATH}")
-    print(f"system - SLEEP_INTERVAL={SLEEP_INTERVAL}")
     print(f"system - DB_HOST={DB_HOST}")
     print(f"system - DB_PORT={DB_PORT}")
+    print(f"system - DB_USER={DB_USER}")
+    print(f"system - DB_PASSWORD={DB_PASSWORD}")
+    print(f"system - SLEEP_INTERVAL={SLEEP_INTERVAL}")
     print(f"system - STEP_SLEEP_INTERVAL={STEP_SLEEP_INTERVAL}")
 
     db_exists = await db.execute_query("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'ph_archiver' AND table_name = 'channels'")

@@ -88,24 +88,24 @@ class Channel:
         missing_vids_of_channel = len(self.missing_videos)
 
         for i, video_id in enumerate(self.missing_videos):
-            yt = YoutubeDL(self.yt_dlp_options)
-            url = video_url_from_id(video_id)
-            download_start = datetime.now(UTC)
-            try:
-                yt.download(url)
-                video_time_taken = nice_timedelta(datetime.now(UTC), download_start)
-                video_perc = ((i+1)/missing_vids_of_channel)*100
-                channel_progress_string = f"{i+1}/{missing_vids_of_channel:,} ({video_perc:,.4f} %)"
+            with YoutubeDL(self.yt_dlp_options) as yt:
+                url = video_url_from_id(video_id)
+                download_start = datetime.now(UTC)
+                try:
+                    yt.download(url)
+                    video_time_taken = nice_timedelta(datetime.now(UTC), download_start)
+                    video_perc = ((i+1)/missing_vids_of_channel)*100
+                    channel_progress_string = f"{i+1}/{missing_vids_of_channel:,} ({video_perc:,.4f} %)"
 
-                channel_perc = (current_channel_number/total_channels)*100
-                total_progress_string = f"{current_channel_number:,}/{total_channels:,} ({channel_perc:,.4f} %)"
-                print(f"\t\tvideo - {self.get_name()} ({total_progress_string}) - download {video_id} ({channel_progress_string}) took {video_time_taken} (channel: {nice_timedelta(datetime.now(UTC), channel_start)} so far)")
-                await self.increment_archived_videos()
-            except Exception as e:
-                continue
-        x1 = datetime.now(UTC)
-        channel_time_taken = nice_timedelta(x1, channel_start)
-        print(f"\tchannel - {self.get_name()} ({current_channel_number:,}/{total_channels:,}) - channel took {channel_time_taken}")
+                    channel_perc = (current_channel_number/total_channels)*100
+                    total_progress_string = f"{current_channel_number:,}/{total_channels:,} ({channel_perc:,.4f} %)"
+                    print(f"\t\tvideo - {self.get_name()} ({total_progress_string}) - download {video_id} ({channel_progress_string}) took {video_time_taken} (channel: {nice_timedelta(datetime.now(UTC), channel_start)} so far)")
+                    await self.increment_archived_videos()
+                except Exception as e:
+                    continue
+            x1 = datetime.now(UTC)
+            channel_time_taken = nice_timedelta(x1, channel_start)
+            print(f"\tchannel - {self.get_name()} ({current_channel_number:,}/{total_channels:,}) - channel took {channel_time_taken}")
 
     def get_already_downloaded_videos(self):
         for file in Path(self.get_channel_path()).iterdir():
@@ -121,9 +121,8 @@ class Channel:
         already_downloaded_videos = self.get_already_downloaded_videos()
         await self.set_archived_video_count()
 
-        yt = YoutubeDL(self.yt_dlp_options)
-
-        info = yt.extract_info(f"{self.link}/videos", download=False)
+        with YoutubeDL(self.yt_dlp_options) as yt:
+            info = yt.extract_info(f"{self.link}/videos", download=False)
         all_videos_on_channel = [video_id_from_link(entry["url"]) for entry in info["entries"]]
         await self.set_total_videos(len(all_videos_on_channel))
 
