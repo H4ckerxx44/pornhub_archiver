@@ -17,7 +17,9 @@ async def execute_query(sql: str, val: Any = ()):
             port=DB_PORT,
             user=DB_USER,
             password=DB_PASSWORD,
-            db="ph_archiver"
+            db="ph_archiver",
+            maxsize=100,
+            pool_recycle=15
     ) as pool:
         async with pool.acquire() as conn:
             async with conn.cursor() as cursor:
