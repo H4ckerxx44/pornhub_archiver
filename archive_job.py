@@ -15,70 +15,136 @@ class ArchiveJob:
         self.start = datetime.now(UTC)
         self.root_path = root_path
 
-    async def archive_channel(self, channel_name: str):
-        for channel in self.channels:
-            if channel.get_name() == channel_name:
-                await channel.archive(1, 1)
+    # -------------------------------------------------------------------------
+    # Public API
+    # -------------------------------------------------------------------------
 
-    async def archive_all(self):
-        print(f"system - archiving all channels ({len(self.channels):,} channels)")
+    async def archive_channel(self, channel_name: str) -> None:
+        channel = self._find_channel(channel_name)
+        if channel:
+            await channel.archive(1, 1)
 
-        start_create_paths = datetime.now(UTC)
-        self.total_archived = 0
-        total_files = 0
-        for j, channel in enumerate(self.channels):
-            start_create_path = datetime.now(UTC)
-            file_amount = channel.create_path()
-            finish_create_path = datetime.now(UTC)
-            total_files += file_amount
-            print(f"\tchannel ({j+1}/{len(self.channels):,}) - {channel.get_name()} contains {file_amount:,} files (total: {total_files:,}), took: {finish_create_path - start_create_path}")
+    async def archive_all(self) -> None:
+        run_start = datetime.now(UTC)
+        print(f"system - archiving {len(self.channels):,} channels")
+
+        total_files = self._create_paths()
         print(f"system - found {total_files:,} files in total")
 
-        finish_create_paths = datetime.now(UTC)
-        print(f"system - creating/checking paths took {finish_create_paths - start_create_paths}")
+        total_deleted = self._cleanup_paths()
+        print(f"system - deleted {total_deleted:,} files in cleanup")
 
-        total_deleted = 0
-        start_cleanup_paths = datetime.now(UTC)
-        for j, channel in enumerate(self.channels):
-            start_cleanup_path = datetime.now(UTC)
-            deleted = channel.cleanup()
-            finish_cleanup_path = datetime.now(UTC)
-            print(f"\tchannel {channel.get_name()} ({j+1}/{len(self.channels):,}) - deleted {deleted:,} files, took: {finish_cleanup_path - start_cleanup_path}")
-            total_deleted += deleted
+        channels_to_download = await self._collect_channels_with_missing_videos()
 
-        finish_cleanup_paths = datetime.now(UTC)
-        print(f"system - cleaning up temp files took {finish_cleanup_paths - start_cleanup_paths}")
-        print(f"system - deleted {total_deleted:,} files")
+        await self._download_all(channels_to_download)
 
-        total_vids_missing = 0
-        start_get_metadata = datetime.now(UTC)
-        channels_to_download_from = []
-        for j, channel in enumerate(self.channels):
-            start_channel_get_metadata = datetime.now(UTC)
-            videos_to_download = await channel.get_metadata()
-            videos_to_download_count = len(videos_to_download)
-            finish_channel_get_metadata = datetime.now(UTC)
-            print(f"\tchannel {channel.get_name()} ({j+1}/{len(self.channels):,}) - getting metadata: {finish_channel_get_metadata - start_channel_get_metadata}")
-            for p, video in enumerate(videos_to_download):
-                print(
-                    f"\t\tvideo {video} - video {p + 1:,} of {videos_to_download_count:,} videos missing, {len(channel.videos_on_disk.items()) :,} already archived")
-            total_vids_missing += videos_to_download_count
-            if videos_to_download_count > 0:
-                channels_to_download_from.append(channel)
-            # print(f"system - now sleeping {STEP_SLEEP_INTERVAL:,} seconds...")
-            await asyncio.sleep(STEP_SLEEP_INTERVAL)
-            # print(f"system - sleeping done, continuing with {channel.get_name()}")
-
-        finish_get_metadata = datetime.now(UTC)
-        print(f"system - getting metadata, took: {finish_get_metadata - start_get_metadata}")
-        print(f"system - {total_vids_missing:,} videos missing")
-
-        start_archive_channel = datetime.now(UTC)
-        for k, channel in enumerate(channels_to_download_from):
-            await channel.archive(k, len(channels_to_download_from))
-            self.total_archived += channel.archived_this_time
-            await asyncio.sleep(STEP_SLEEP_INTERVAL)
-        finish_archive_channel = datetime.now(UTC)
-        print(f"system - downloading all {len(self.channels):,} channels, took: {finish_archive_channel - start_archive_channel}")
-        print(f"system - total runtime: {finish_archive_channel - start_create_paths}")
+        elapsed = datetime.now(UTC) - run_start
+        print(f"system - total runtime: {elapsed}")
         print(f"system - total archived this run: {self.total_archived:,}")
+
+    # -------------------------------------------------------------------------
+    # Steps
+    # -------------------------------------------------------------------------
+
+    def _create_paths(self) -> int:
+        start = datetime.now(UTC)
+        total_files = 0
+
+        for j, channel in enumerate(self.channels):
+            step_start = datetime.now(UTC)
+            file_count = channel.create_path()
+            total_files += file_count
+            elapsed = datetime.now(UTC) - step_start
+            print(
+                f"\t[{j+1}/{len(self.channels):,}] {channel.get_name()} — "
+                f"{file_count:,} files (total: {total_files:,}), took: {elapsed}"
+            )
+
+        print(f"system - creating/checking paths took {datetime.now(UTC) - start}")
+        return total_files
+
+    def _cleanup_paths(self) -> int:
+        start = datetime.now(UTC)
+        total_deleted = 0
+
+        for j, channel in enumerate(self.channels):
+            step_start = datetime.now(UTC)
+            deleted = channel.cleanup()
+            total_deleted += deleted
+            elapsed = datetime.now(UTC) - step_start
+            print(
+                f"\t[{j+1}/{len(self.channels):,}] {channel.get_name()} — "
+                f"deleted {deleted:,} files, took: {elapsed}"
+            )
+
+        print(f"system - cleanup took {datetime.now(UTC) - start}")
+        return total_deleted
+
+    async def _collect_channels_with_missing_videos(self) -> list[Channel]:
+        """Fetch metadata for all channels concurrently, then return those with missing videos."""
+        start = datetime.now(UTC)
+        total_channels = len(self.channels)
+
+        print(f"system - fetching metadata for {total_channels:,} channels concurrently...")
+
+        tasks = [self._fetch_channel_metadata(channel) for channel in self.channels]
+        results: list[tuple[Channel, list]] = await asyncio.gather(*tasks)
+
+        print(f"system - metadata fetch done, took {datetime.now(UTC) - start}")
+
+        channels_to_download = []
+        total_missing = 0
+
+        for channel, missing_videos in results:
+            missing_count = len(missing_videos)
+            archived_count = len(channel.videos_on_disk)
+            total_count = archived_count + missing_count
+
+            if missing_videos:
+                print(
+                    f"\t{channel.get_name()} — "
+                    f"{missing_count:,} missing / {archived_count:,} archived / {total_count:,} total"
+                )
+                for p, video in enumerate(missing_videos):
+                    print(f"\t\t[{p + 1:,}/{missing_count:,}] {video}")
+                channels_to_download.append(channel)
+            else:
+                print(f"\t{channel.get_name()} — up to date ({archived_count:,} archived)")
+
+            total_missing += missing_count
+
+        print(
+            f"system - {total_missing:,} videos missing across {len(channels_to_download):,}/{total_channels:,} channels")
+        return channels_to_download
+
+    async def _download_all(self, channels: list[Channel]) -> None:
+        start = datetime.now(UTC)
+        total = len(channels)
+
+        for k, channel in enumerate(channels):
+            await channel.archive(k, total)
+            self.total_archived += channel.archived_this_time
+            if k < total - 1:
+                await asyncio.sleep(STEP_SLEEP_INTERVAL)
+
+        print(f"system - downloading {total:,} channels took {datetime.now(UTC) - start}")
+
+    # -------------------------------------------------------------------------
+    # Helpers
+    # -------------------------------------------------------------------------
+
+    def _find_channel(self, name: str) -> Channel | None:
+        return next((c for c in self.channels if c.get_name() == name), None)
+
+    @staticmethod
+    async def _fetch_channel_metadata(channel: Channel) -> tuple[Channel, list]:
+        start = datetime.now(UTC)
+        print(f"\t{channel.get_name()} — fetching metadata...")
+
+        videos_to_download = await channel.get_metadata()
+
+        elapsed = datetime.now(UTC) - start
+        print(f"\t{channel.get_name()} — metadata fetched in {elapsed}, sleeping {STEP_SLEEP_INTERVAL:,}s...")
+
+        await asyncio.sleep(STEP_SLEEP_INTERVAL)
+        return channel, videos_to_download

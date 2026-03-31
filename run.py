@@ -8,52 +8,74 @@ from archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
 from channel import Channel
 from db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
 
-# os.environ["OPENSSL_CONF"] = "/dev/null"
-
-ROOT_PATH = pathlib.Path("/data")
+ROOT_PATH = pathlib.Path(os.getenv("ROOT_PATH", "/data"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
 OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
+VERSION = (2, 2, 1)
 
-MAJOR = 2
-MINOR = 1
-PATCH = 0
 
-async def main():
-    print(f"system - running version v{MAJOR}.{MINOR}.{PATCH}")
-    print(f"system - OPENSSL_CONF={OPENSSL_CONF}")
-    print(f"system - ROOT_PATH={ROOT_PATH}")
-    print(f"system - DB_HOST={DB_HOST}")
-    print(f"system - DB_PORT={DB_PORT}")
-    print(f"system - DB_USER={DB_USER}")
-    print(f"system - DB_PASSWORD={DB_PASSWORD}")
-    print(f"system - SLEEP_INTERVAL={SLEEP_INTERVAL}")
-    print(f"system - STEP_SLEEP_INTERVAL={STEP_SLEEP_INTERVAL}")
-
-    print(f"system - old yt-dlp version: ", end="")
-    subprocess.run("yt-dlp --version", shell=True)
-
-    print(f"system - updating yt-dlp...", end="")
-    subprocess.run("pip install --upgrade --pre yt-dlp", shell=True, stdout=subprocess.DEVNULL)
-
-    print(f"system - new yt-dlp version: ", end="")
-    subprocess.run("yt-dlp --version", shell=True)
-
-    db_exists = await db.execute_query("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'ph_archiver' AND table_name = 'channels'")
-    result = db_exists[0][0]
-    if result:
-        print("system - database table exists")
-
-    if not result:
-        print("system - creating table")
-        await db.create_table()
+async def main() -> None:
+    _print_startup_info()
+    await _update_yt_dlp()
+    await _ensure_db()
 
     while True:
-        channels: list[Channel] = await Channel.get_all_channels(ROOT_PATH)
-        archive_job = ArchiveJob(channels, ROOT_PATH)
-
-        await archive_job.archive_all()
+        channels = await Channel.get_all_channels(ROOT_PATH)
+        await ArchiveJob(channels, ROOT_PATH).archive_all()
         await asyncio.sleep(SLEEP_INTERVAL)
+
+
+# -----------------------------------------------------------------------------
+# Startup helpers
+# -----------------------------------------------------------------------------
+
+def _print_startup_info() -> None:
+    version_str = ".".join(str(v) for v in VERSION)
+    settings = {
+        "version":             f"v{version_str}",
+        "OPENSSL_CONF":        OPENSSL_CONF,
+        "ROOT_PATH":           ROOT_PATH,
+        "DB_HOST":             DB_HOST,
+        "DB_PORT":             DB_PORT,
+        "DB_USER":             DB_USER,
+        "DB_PASSWORD":         DB_PASSWORD,
+        "SLEEP_INTERVAL":      SLEEP_INTERVAL,
+        "STEP_SLEEP_INTERVAL": STEP_SLEEP_INTERVAL,
+    }
+    for key, value in settings.items():
+        print(f"system - {key}={value}")
+
+
+async def _update_yt_dlp() -> None:
+    old = _yt_dlp_version()
+    subprocess.run(
+        "pip install --upgrade --pre yt-dlp",
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    new = _yt_dlp_version()
+    print(f"system - yt-dlp {old} → {new}")
+
+
+def _yt_dlp_version() -> str:
+    result = subprocess.run("yt-dlp --version", shell=True, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+async def _ensure_db() -> None:
+    rows = await db.execute_query(
+        "SELECT count(*) FROM information_schema.tables "
+        "WHERE table_schema = 'ph_archiver' AND table_name = 'channels'"
+    )
+    table_exists = bool(rows[0][0])
+
+    if table_exists:
+        print("system - database table exists")
+    else:
+        print("system - creating table")
+        await db.create_table()
 
 
 if __name__ == "__main__":
