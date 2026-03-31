@@ -1,5 +1,4 @@
 from datetime import datetime, UTC
-from typing import Union
 
 from yt_dlp import YoutubeDL
 
@@ -11,41 +10,53 @@ from functions import video_url_from_id, video_id_from_link, nice_timedelta
 
 class Channel:
     def __init__(self, db_id: int, link: str, total_videos: int, archived_videos: int, added_on: datetime, last_queried_at: datetime, root_path: Path):
+        self.archived_this_time: int = 0
         self.missing_videos = []
         self.db_id: int = db_id
         self.link: str = link
         self.total_videos: int = total_videos
         self.archived_videos: int = archived_videos
-        self.name: Union[None, str] = None
+        self.name: str = self.link.split('/')[-1]
         self.added_on: datetime = added_on
         self.last_queried_at: datetime = last_queried_at
         self.root_path: Path = root_path
-        self.channel_path: Union[None, Path] = None
+        self.channel_path: Path = self.root_path / self.name
         self.videos_on_disk: dict[str, bool] = {}
+        self.error_count: int = 0
         self.yt_dlp_options = {
-            "extract_flat": True,
             "quiet": True,
-            "progress": True,
+            "noprogress": True,
+            # "verbose": True,
+            "no_warnings": True,
+            "extract_flat": True,
             "outtmpl": f"{self.channel_path}/[%(id)s] %(title)s.%(ext)s",
             "restrictfilenames": True,
-            "concurrent_fragment_downloads": 16,
-            "source_address": "0.0.0.0",
-            "verbose": False,
-            "debug_printtraffic": False,
+            "concurrent_fragment_downloads": 1,
+            # "source_address": "0.0.0.0",
+            # "debug_printtraffic": False,
             "nocheckcertificate": True,
-            "retries": 10,
+            "retries": 5,
             "fragment_retries": 10,
             "socket_timeout": 30,
+            "writethumbnail": True,
+            'postprocessors': [
+                {
+                    "key": "FFmpegMetadata",
+                    "add_chapters": True,
+                    "add_metadata": True,
+                    "add_infojson": "if_exists"
+                },
+                {
+                    "key": "EmbedThumbnail",
+                    "already_have_thumbnail": False
+                }
+            ]
         }
 
     def get_name(self):
-        if not self.name:
-            self.name = self.link.split('/')[-1]
         return self.name
 
     def get_channel_path(self):
-        if not self.channel_path:
-            self.channel_path = self.root_path / self.get_name()
         return self.channel_path
 
     async def update_channel(self) -> None:
@@ -57,6 +68,7 @@ class Channel:
 
     async def increment_archived_videos(self) -> None:
         self.archived_videos += 1
+        self.archived_this_time += 1
         await db.execute_query('update channels set archived_videos=archived_videos+1 where link=%s', (self.link))
 
     @staticmethod
@@ -85,7 +97,9 @@ class Channel:
     async def archive(self, current_channel_number: int, total_channels: int) -> None:
         # scan for existing videos
         channel_start = datetime.now(UTC)
+        self.archived_this_time = 0
         missing_vids_of_channel = len(self.missing_videos)
+        errors = 0
 
         for i, video_id in enumerate(self.missing_videos):
             with YoutubeDL(self.yt_dlp_options) as yt:
@@ -102,10 +116,11 @@ class Channel:
                     print(f"\t\tvideo - {self.get_name()} ({total_progress_string}) - download {video_id} ({channel_progress_string}) took {video_time_taken} (channel: {nice_timedelta(datetime.now(UTC), channel_start)} so far)")
                     await self.increment_archived_videos()
                 except Exception as e:
-                    continue
-            x1 = datetime.now(UTC)
-            channel_time_taken = nice_timedelta(x1, channel_start)
-            print(f"\tchannel - {self.get_name()} ({current_channel_number:,}/{total_channels:,}) - channel took {channel_time_taken}")
+                    # print(f"\tchannel - {e}")
+                    errors += 1
+        x1 = datetime.now(UTC)
+        channel_time_taken = nice_timedelta(x1, channel_start)
+        print(f"\tchannel - {self.get_name()} ({current_channel_number:,}/{total_channels:,}) - channel took {channel_time_taken} | archived this run: {self.archived_this_time:,} | errors: {errors:,}")
 
     def get_already_downloaded_videos(self):
         for file in Path(self.get_channel_path()).iterdir():
@@ -122,9 +137,18 @@ class Channel:
         await self.set_archived_video_count()
 
         with YoutubeDL(self.yt_dlp_options) as yt:
-            info = yt.extract_info(f"{self.link}/videos", download=False)
+            error_encountered = False
+            try:
+                info = yt.extract_info(f"{self.link}/videos", download=False)
+                await self.update_channel()
+            except Exception:
+                self.error_count += 1
+                print(f"\tchannel - {self.get_name()} - encountered error {self.error_count:,}")
+                info = {"entries": []}
+                error_encountered = True
         all_videos_on_channel = [video_id_from_link(entry["url"]) for entry in info["entries"]]
-        await self.set_total_videos(len(all_videos_on_channel))
+        if not error_encountered:
+            await self.set_total_videos(len(all_videos_on_channel))
 
         # print(f"{self.get_name()} - all videos ({len(all_videos_on_channel):,}): {all_videos_on_channel}")
         # print(f"{self.get_name()} - present on disk ({len(already_downloaded_videos):,}): {already_downloaded_videos}")
