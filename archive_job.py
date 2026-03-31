@@ -87,8 +87,10 @@ class ArchiveJob:
 
         print(f"system - fetching metadata for {total_channels:,} channels concurrently...")
 
-        tasks = [self._fetch_channel_metadata(channel) for channel in self.channels]
-        results: list[tuple[Channel, list]] = await asyncio.gather(*tasks)
+        # tasks = [self._fetch_channel_metadata(channel) for channel in self.channels]
+        # results: list[tuple[Channel, list]] = await asyncio.gather(*tasks)
+
+        results: list[tuple[Channel, list]] = [await self._fetch_channel_metadata(channel) for channel in self.channels]
 
         print(f"system - metadata fetch done, took {datetime.now(UTC) - start}")
 
@@ -122,7 +124,7 @@ class ArchiveJob:
         total = len(channels)
 
         for k, channel in enumerate(channels):
-            await channel.archive(k, total)
+            await channel.archive(k+1, total)
             self.total_archived += channel.archived_this_time
             if k < total - 1:
                 await asyncio.sleep(STEP_SLEEP_INTERVAL)

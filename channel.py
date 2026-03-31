@@ -152,11 +152,11 @@ class Channel:
             video_elapsed = nice_timedelta(datetime.now(UTC), download_start)
             channel_elapsed = nice_timedelta(datetime.now(UTC), channel_start)
             video_pct = (index + 1) / total * 100
-            channel_pct = (channel_index + 1) / total_channels * 100
+            channel_pct = (channel_index) / total_channels * 100
 
             print(
                 f"\t\tvideo - {self.name} "
-                f"({channel_index+1:,}/{total_channels:,} | {channel_pct:,.2f}%) — "
+                f"({channel_index:,}/{total_channels:,} | {channel_pct:,.2f}%) — "
                 f"video {index+1:,}/{total:,} ({video_pct:,.2f}%) "
                 f"id={video_id}, took {video_elapsed} (channel: {channel_elapsed} so far)"
             )
