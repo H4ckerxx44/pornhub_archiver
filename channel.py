@@ -73,6 +73,11 @@ class Channel:
         errors = 0
         total = len(self.missing_videos)
 
+        print(
+            f"\tchannel - {self.name} ({current_channel_number:,}/{total_channels:,}) — "
+            f"{total:,} videos to archive..."
+        )
+
         for i, video_id in enumerate(self.missing_videos):
             success = await self._download_video(
                 video_id, i, total, current_channel_number, total_channels, channel_start
@@ -151,14 +156,13 @@ class Channel:
 
             video_elapsed = nice_timedelta(datetime.now(UTC), download_start)
             channel_elapsed = nice_timedelta(datetime.now(UTC), channel_start)
-            video_pct = (index + 1) / total * 100
-            channel_pct = (channel_index) / total_channels * 100
+            video_pct = ((index + 1) / total) * 100
+            channel_pct = (channel_index / total_channels) * 100
 
             print(
-                f"\t\tvideo - {self.name} "
-                f"({channel_index:,}/{total_channels:,} | {channel_pct:,.2f}%) — "
-                f"video {index+1:,}/{total:,} ({video_pct:,.2f}%) "
-                f"id={video_id}, took {video_elapsed} (channel: {channel_elapsed} so far)"
+                f"\t\tchannel - {self.name} ({channel_index:,}/{total_channels:,} | {channel_pct:,.2f}%) - "
+                f"video {video_id} ({index+1:,}/{total:,} | {video_pct:,.2f}%)"
+                f", took {video_elapsed} (channel: {channel_elapsed} so far)"
             )
             await self._increment_archived_videos()
             return True

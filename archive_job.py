@@ -102,18 +102,15 @@ class ArchiveJob:
             archived_count = len(channel.videos_on_disk)
             total_count = archived_count + missing_count
 
+            s = f"\t{channel.get_name()} — {missing_count:,} missing / {archived_count:,} archived / {total_count:,} total"
+
             if missing_videos:
-                print(
-                    f"\t{channel.get_name()} — "
-                    f"{missing_count:,} missing / {archived_count:,} archived / {total_count:,} total"
-                )
-                for p, video in enumerate(missing_videos):
-                    print(f"\t\t[{p + 1:,}/{missing_count:,}] {video}")
+                joined_vids = ", ".join(missing_videos)
+                s += f"| {missing_count:,}: {joined_vids}"
                 channels_to_download.append(channel)
-            else:
-                print(f"\t{channel.get_name()} — up to date ({archived_count:,} archived)")
 
             total_missing += missing_count
+            print(s)
 
         print(
             f"system - {total_missing:,} videos missing across {len(channels_to_download):,}/{total_channels:,} channels")
