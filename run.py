@@ -2,6 +2,7 @@ import asyncio
 import os
 import pathlib
 import subprocess
+from datetime import datetime, timedelta, UTC
 
 import db
 from archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
@@ -23,6 +24,7 @@ async def main() -> None:
     while True:
         channels = await Channel.get_all_channels(ROOT_PATH)
         await ArchiveJob(channels, ROOT_PATH).archive_all()
+        print(f"system - next run at {datetime.now(UTC) + timedelta(seconds=STEP_SLEEP_INTERVAL)}")
         await asyncio.sleep(SLEEP_INTERVAL)
 
 

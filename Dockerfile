@@ -15,7 +15,7 @@ ENV SLEEP_INTERVAL=3600 \
 
 WORKDIR /app
 
-# System dependencies — single layer
+# System dependencies - single layer
 RUN apk add --no-cache \
         ffmpeg \
         ca-certificates \
@@ -28,19 +28,19 @@ RUN apk add --no-cache \
     && update-ca-certificates \
     && sed -i 's/openssl_conf = openssl_init/#openssl_conf = openssl_init/g' /etc/ssl/openssl.cnf
 
-# PhantomJS — single layer
+# PhantomJS - single layer
 RUN curl -L "https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-2.1.1-linux-x86_64.tar.bz2" \
         | tar -xj -C /tmp \
     && mv /tmp/phantomjs-2.1.1-linux-x86_64/bin/phantomjs /usr/local/bin/phantomjs \
     && chmod +x /usr/local/bin/phantomjs \
     && rm -rf /tmp/phantomjs-2.1.1-linux-x86_64
 
-# Python dependencies — single layer, deduplicated
+# Python dependencies - single layer, deduplicated
 RUN pip install --no-cache-dir \
         aiomysql \
         "yt-dlp[default,curl-cffi]"
 
-# Application code — last so code changes don't invalidate dependency layers
+# Application code - last so code changes don't invalidate dependency layers
 COPY . /app
 
 VOLUME ["/data"]
