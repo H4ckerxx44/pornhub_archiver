@@ -98,7 +98,7 @@ class Channel:
             f"took {elapsed} | archived: {self.archived_this_time:,} | errors: {errors:,}\n"
             f"\t\tsize: downloaded {format_si(self.size_downloaded)} this run | "
             f"total on disk: {format_si(total_size_after)} "
-            f"(was {format_si(self.size_before)}, +{format_si(self.size_downloaded)}) (+{format_si(total_size_after)})"
+            f"(was {format_si(self.size_before)} + {format_si(self.size_downloaded)} => {format_si(total_size_after)}"
         )
 
     # -------------------------------------------------------------------------
