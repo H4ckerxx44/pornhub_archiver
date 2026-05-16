@@ -139,6 +139,11 @@ class ArchiveJob:
     async def _fetch_channel_metadata(channel: Channel, channel_number: int, total_channels: int) -> tuple[Channel, list]:
         start = datetime.now(UTC)
         videos_to_download = await channel.get_metadata(channel_number, total_channels)
-        print(f"\t[{channel_number+1}/{total_channels}] {channel.get_name()} - metadata fetched in {nice_timedelta(datetime.now(UTC), start)}, sleeping {STEP_SLEEP_INTERVAL:,} seconds...")
+        msg = f"\t[{channel_number+1}/{total_channels}] {channel.get_name()} - metadata fetched in {nice_timedelta(datetime.now(UTC), start)}"
+
+        if STEP_SLEEP_INTERVAL > 0:
+            msg += f", sleeping {STEP_SLEEP_INTERVAL:,} seconds..."
+
+        print(msg)
         await asyncio.sleep(STEP_SLEEP_INTERVAL)
         return channel, videos_to_download
