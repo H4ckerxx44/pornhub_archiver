@@ -105,7 +105,7 @@ class ArchiveJob:
 
             if missing_videos:
                 joined_vids = ", ".join(missing_videos)
-                s += f"| {missing_count:,}: {joined_vids}"
+                s += f" | {missing_count:,}: {joined_vids}"
                 channels_to_download.append(channel)
 
             total_missing += missing_count
