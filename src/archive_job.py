@@ -100,8 +100,9 @@ class ArchiveJob:
             missing_count = len(missing_videos)
             archived_count = len(channel.videos_on_disk)
             total_count = archived_count + missing_count
+            offline_count = len(channel.offline_videos)
 
-            s = f"\t{channel.get_name()} - {missing_count:,} missing / {archived_count:,} archived / {total_count:,} total"
+            s = f"\t{channel.get_name()} - {missing_count:,} missing / {archived_count:,} archived / {total_count:,} total / {offline_count:,} now offline"
 
             if missing_videos:
                 joined_vids = ", ".join(missing_videos)

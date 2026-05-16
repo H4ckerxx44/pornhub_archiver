@@ -34,6 +34,7 @@ class Channel:
         self.channel_path = root_path / self.name
         self.videos_on_disk: dict[str, bool] = {}
         self.missing_videos: list[str] = []
+        self.offline_videos: list[str] = []
         self.archived_this_time: int = 0
         self.error_count: int = 0
         self.size_before: int = 0  # total channel bytes on disk before this run
@@ -195,6 +196,8 @@ class Channel:
             await self._update_last_queried()
             await self._set_total_videos(len(channel_videos))
 
+        channel_video_set = set(channel_videos)
+        self.offline_videos = [v for v in self.videos_on_disk if v not in channel_video_set]
         self.missing_videos = [v for v in channel_videos if v not in self.videos_on_disk]
         return self.missing_videos
 
