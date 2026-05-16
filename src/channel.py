@@ -80,7 +80,7 @@ class Channel:
 
         print(
             f"\tchannel - {self.name} ({current_channel_number:,}/{total_channels:,} | {channel_pct:,.2f}%) - "
-            f"{total:,} videos to archive... (existing: {format_si(self.size_before)})"
+            f"{total:,} video(s) to archive... (existing: {format_si(self.size_before)})"
         )
 
         for i, video_id in enumerate(self.missing_videos):
