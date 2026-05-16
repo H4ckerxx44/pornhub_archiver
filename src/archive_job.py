@@ -25,8 +25,8 @@ class ArchiveJob:
         run_start = datetime.now(UTC)
         print(f"system - archiving {len(self.channels):,} channels")
 
-        total_files = self._create_paths()
-        print(f"system - found {total_files:,} files in total")
+        # total_files = self._create_paths()
+        # print(f"system - found {total_files:,} files in total")
 
         total_deleted = self._cleanup_paths()
         print(f"system - deleted {total_deleted:,} files in cleanup")
@@ -59,7 +59,7 @@ class ArchiveJob:
             )
 
         print(f"system - creating/checking paths took {nice_timedelta(datetime.now(UTC), start)}")
-        print(f"system - total files: {total_files:,}, total size: {total_size}")
+        print(f"system - total files: {total_files:,}, total size: {format_si(total_size)}")
         return total_files
 
     def _cleanup_paths(self) -> int:
