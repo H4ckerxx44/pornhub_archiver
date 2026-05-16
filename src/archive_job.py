@@ -104,9 +104,10 @@ class ArchiveJob:
 
             s = f"\t{channel.get_name()} - {missing_count:,} missing / {archived_count:,} archived / {total_count:,} total / {offline_count:,} now offline"
 
+            if offline_count:
+                s += f" | {offline_count:,}: [{", ".join(channel.offline_videos)}]"
+
             if missing_videos:
-                joined_vids = ", ".join(missing_videos)
-                s += f" | {missing_count:,}: {joined_vids}"
                 channels_to_download.append(channel)
 
             total_missing += missing_count
