@@ -24,7 +24,7 @@ async def main() -> None:
     while True:
         channels = await Channel.get_all_channels(ROOT_PATH)
         await ArchiveJob(channels, ROOT_PATH).archive_all()
-        print(f"system - next run at {datetime.now(UTC) + timedelta(seconds=STEP_SLEEP_INTERVAL)}")
+        print(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
         await asyncio.sleep(SLEEP_INTERVAL)
 
 
