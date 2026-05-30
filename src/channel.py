@@ -212,7 +212,6 @@ class Channel:
                 except Exception:
                         self.error_count += 1
                         print(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
-                        return [], True
             return [], True
 
     def _scan_disk(self) -> None:
