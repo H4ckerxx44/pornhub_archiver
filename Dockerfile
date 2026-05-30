@@ -44,8 +44,8 @@ RUN pip install \
         aiomysql \
         "yt-dlp[default,curl-cffi]"
 
-COPY src/ /app/
+COPY . /app/
 
 VOLUME ["/data"]
 
-CMD ["python", "run.py"]
+CMD ["python", "src/run.py"]
