@@ -13,7 +13,7 @@ ROOT_PATH = pathlib.Path(os.getenv("ROOT_PATH", "/data"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
 OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
-VERSION = (2, 3, 1)
+VERSION = (4, 0, 0)
 
 
 async def main() -> None:
