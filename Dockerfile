@@ -1,9 +1,23 @@
-# Python 3.14.2
-FROM python:3.14.2-alpine
+FROM python:3.14.5-alpine AS phantomjs
+
+ARG PHANTOMJS_VERSION=2.1.1
+
+RUN apk add --no-cache \
+        bzip2 \
+        curl \
+    && curl -fsSL "https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-${PHANTOMJS_VERSION}-linux-x86_64.tar.bz2" \
+        | tar -xj -C /tmp \
+    && mv "/tmp/phantomjs-${PHANTOMJS_VERSION}-linux-x86_64/bin/phantomjs" /usr/local/bin/phantomjs \
+    && chmod +x /usr/local/bin/phantomjs
+
+FROM python:3.14.5-alpine
 
 # Runtime behaviour
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    OPENSSL_CONF=/dev/null
 
 # Config defaults (override at runtime)
 ENV SLEEP_INTERVAL=3600 \
@@ -15,33 +29,22 @@ ENV SLEEP_INTERVAL=3600 \
 
 WORKDIR /app
 
-# System dependencies - single layer
 RUN apk add --no-cache \
-        ffmpeg \
         ca-certificates \
-        openssl \
-        libstdc++ \
-        bzip2 \
-        gcompat \
-        curl \
         deno \
-    && update-ca-certificates \
-    && sed -i 's/openssl_conf = openssl_init/#openssl_conf = openssl_init/g' /etc/ssl/openssl.cnf
+        ffmpeg \
+        gcompat \
+        libstdc++ \
+        openssl \
+    && update-ca-certificates
 
-# PhantomJS - single layer
-RUN curl -L "https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-2.1.1-linux-x86_64.tar.bz2" \
-        | tar -xj -C /tmp \
-    && mv /tmp/phantomjs-2.1.1-linux-x86_64/bin/phantomjs /usr/local/bin/phantomjs \
-    && chmod +x /usr/local/bin/phantomjs \
-    && rm -rf /tmp/phantomjs-2.1.1-linux-x86_64
+COPY --from=phantomjs /usr/local/bin/phantomjs /usr/local/bin/phantomjs
 
-# Python dependencies - single layer, deduplicated
-RUN pip install --no-cache-dir \
+RUN pip install \
         aiomysql \
         "yt-dlp[default,curl-cffi]"
 
-# Application code - last so code changes don't invalidate dependency layers
-COPY . /app
+COPY src/ /app/
 
 VOLUME ["/data"]
 
