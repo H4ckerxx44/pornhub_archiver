@@ -89,7 +89,7 @@ class Channel:
                 video_id, i, total, channel_start
             )
             if not success:
-                print(f"\t\tvideo {video_id} errored")
+                print(f"\t\tvideo {video_url_from_id(video_id)} errored")
                 errors += 1
 
         total_size_after = self.size_before + self.size_downloaded
