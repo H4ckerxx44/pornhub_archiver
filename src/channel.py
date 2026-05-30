@@ -11,6 +11,8 @@ _PARTIAL_SUFFIXES = (".part",)
 _PARTIAL_FRAGMENTS = (".part-Frag",)
 _LINK_SUFFIXES = ("/videos/", "/videos", "/")
 
+MAX_ERRORS = 5
+
 
 class Channel:
     def __init__(
@@ -203,13 +205,15 @@ class Channel:
 
     async def _fetch_channel_video_ids(self, current_channel_number: int, total_channels: int) -> tuple[list[str], bool]:
         with YoutubeDL(self.yt_dlp_options) as yt:
-            try:
-                info = yt.extract_info(f"{self.link}/videos", download=False)
-                return [video_id_from_link(e["url"]) for e in info["entries"]], False
-            except Exception:
-                self.error_count += 1
-                print(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
-                return [], True
+            while self.error_count < MAX_ERRORS:
+                try:
+                    info = yt.extract_info(f"{self.link}/videos", download=False)
+                    return [video_id_from_link(e["url"]) for e in info["entries"]], False
+                except Exception:
+                        self.error_count += 1
+                        print(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
+                        return [], True
+            return [], True
 
     def _scan_disk(self) -> None:
         """Populate `videos_on_disk` from files currently on disk."""
