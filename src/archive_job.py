@@ -129,7 +129,7 @@ class ArchiveJob:
                 await asyncio.sleep(STEP_SLEEP_INTERVAL)
 
         print(f"system - downloading {total:,} channels took {nice_timedelta(datetime.now(UTC), start)}")
-        print(f"system - downloaded {self.total_archived}:, videos, size: {format_si(self.archived_data)}")
+        print(f"system - downloaded {self.total_archived} videos, size: +{format_si(self.archived_data)}")
 
     # -------------------------------------------------------------------------
     # Helpers
