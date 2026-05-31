@@ -121,11 +121,11 @@ class ArchiveJob:
         start = datetime.now(UTC)
         total = len(channels)
 
-        for k, channel in enumerate(channels):
-            await channel.archive(k+1, total)
+        for i, channel in enumerate(channels):
+            await channel.archive(i+1, total)
             self.total_archived += channel.archived_this_time
             self.archived_data += channel.size_downloaded
-            if k < total - 1:
+            if i < total - 1:
                 await asyncio.sleep(STEP_SLEEP_INTERVAL)
 
         print(f"system - downloading {total:,} channels took {nice_timedelta(datetime.now(UTC), start)}")
