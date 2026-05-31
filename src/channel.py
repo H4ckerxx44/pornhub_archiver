@@ -6,6 +6,7 @@ from yt_dlp import YoutubeDL
 import db
 from SilentLogger import SilentLogger
 from functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si
+from src.functions import spacer
 
 _PARTIAL_SUFFIXES = (".part",)
 _PARTIAL_FRAGMENTS = (".part-Frag",)
@@ -97,11 +98,11 @@ class Channel:
         total_size_after = self.size_before + self.size_downloaded
         elapsed = nice_timedelta(datetime.now(UTC), channel_start)
         print(
-            f"\tchannel - {self.name} ({current_channel_number:,}/{total_channels:,}) - "
-            f"took {elapsed} | archived: {self.archived_this_time:,} | errors: {errors:,}\n"
-            f"\t\tsize: downloaded {format_si(self.size_downloaded)} this run | "
+            f"\t\t{spacer()} RESULT {spacer()}\n"
+            f"\t\tdownloaded {format_si(self.size_downloaded)} this run | "
             f"total on disk: {format_si(total_size_after)} "
-            f"(was {format_si(self.size_before)} + {format_si(self.size_downloaded)} => {format_si(total_size_after)}"
+            f"(was {format_si(self.size_before)} + {format_si(self.size_downloaded)} => {format_si(total_size_after)}\n"
+            f"\t\ttook {elapsed} | archived: {self.archived_this_time:,} | errors: {errors:,}\n"
         )
 
     # -------------------------------------------------------------------------

@@ -18,3 +18,6 @@ def format_si(size_bytes: int) -> str:
             return f"{size_bytes:,.2f} {unit}"
         size_bytes /= 1024
     return f"{size_bytes:,.2f} QiB"
+
+def spacer(spacer_length: int = 25, spacer_char: str = "=") -> str:
+    return spacer_char * spacer_length
