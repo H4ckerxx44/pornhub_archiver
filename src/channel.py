@@ -5,8 +5,7 @@ from yt_dlp import YoutubeDL
 
 import db
 from SilentLogger import SilentLogger
-from functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si
-from src.functions import spacer
+from functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si, spacer
 
 _PARTIAL_SUFFIXES = (".part",)
 _PARTIAL_FRAGMENTS = (".part-Frag",)
