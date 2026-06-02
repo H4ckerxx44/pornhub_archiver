@@ -2,6 +2,18 @@
 
 A small Dockerized archiver for Pornhub model and pornstar channels. It reads channels from a MariaDB database, checks which videos are missing from disk, and downloads missing videos into `/data`.
 
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Environment Variables](#environment-variables)
+- [Notes](#notes)
+- [Database Setup](#database-setup)
+- [Adding Channels](#adding-channels)
+- [Storage Layout](#storage-layout)
+- [Docker](#docker)
+- [How It Works](#how-it-works)
+- [Contributing](#contributing)
+
 ## Requirements
 
 - Docker
@@ -9,6 +21,24 @@ A small Dockerized archiver for Pornhub model and pornstar channels. It reads ch
 - Enough disk space for the archived videos
 
 Mounting `/data` to a large HDD is highly recommended.
+
+## Environment Variables
+
+| Variable              | Default     | Description                                                    |
+|-----------------------|-------------|----------------------------------------------------------------|
+| `STEP_SLEEP_INTERVAL` | `15`        | Seconds to wait between each channel's metadata/download step. |
+| `SLEEP_INTERVAL`      | `3600`      | Seconds to sleep after each archival run.                      |
+| `DB_HOST`             | `localhost` | Host running the MariaDB server.                               |
+| `DB_PORT`             | `3306`      | MariaDB server port.                                           |
+| `DB_USER`             | `root`      | Database user used by the archiver.                            |
+| `DB_PASSWORD`         | `root`      | Database password.                                             |
+
+## Notes
+
+- The database name is fixed as `ph_archiver`.
+- Only rows where `channels.is_active = 1` are archived.
+- The container updates `yt-dlp` on startup.
+- Partial download fragments are cleaned up at the beginning of each run.
 
 ## Database Setup
 
@@ -19,6 +49,8 @@ CREATE DATABASE ph_archiver;
 ```
 
 The container creates the `channels` table automatically on startup if it does not exist.
+
+## Adding Channels
 
 Channels are added directly in the database. Use any database explorer/admin tool you like, for example DBeaver, HeidiSQL, phpMyAdmin, TablePlus, or DataGrip.
 
@@ -123,24 +155,6 @@ flowchart TD
     W --> X[Sleep SLEEP_INTERVAL seconds]
     X --> F
 ```
-
-## Environment Variables
-
-| Variable              | Default     | Description                                                    |
-|-----------------------|-------------|----------------------------------------------------------------|
-| `STEP_SLEEP_INTERVAL` | `15`        | Seconds to wait between each channel's metadata/download step. |
-| `SLEEP_INTERVAL`      | `3600`      | Seconds to sleep after each archival run.                      |
-| `DB_HOST`             | `localhost` | Host running the MariaDB server.                               |
-| `DB_PORT`             | `3306`      | MariaDB server port.                                           |
-| `DB_USER`             | `root`      | Database user used by the archiver.                            |
-| `DB_PASSWORD`         | `root`      | Database password.                                             |
-
-## Notes
-
-- The database name is fixed as `ph_archiver`.
-- Only rows where `channels.is_active = 1` are archived.
-- The container updates `yt-dlp` on startup.
-- Partial download fragments are cleaned up at the beginning of each run.
 
 ## Contributing
 
