@@ -24,21 +24,21 @@ Mounting `/data` to a large HDD is highly recommended.
 
 ## Environment Variables
 
-| Variable              | Default     | Description                                                    |
-|-----------------------|-------------|----------------------------------------------------------------|
-| `STEP_SLEEP_INTERVAL` | `15`        | Seconds to wait between each channel's metadata/download step. |
-| `SLEEP_INTERVAL`      | `3600`      | Seconds to sleep after each archival run.                      |
-| `DB_HOST`             | `localhost` | Host running the MariaDB server.                               |
-| `DB_PORT`             | `3306`      | MariaDB server port.                                           |
-| `DB_USER`             | `root`      | Database user used by the archiver.                            |
-| `DB_PASSWORD`         | `root`      | Database password.                                             |
-| `LOKI_URL`            | empty       | Loki base URL or push endpoint. Leave empty to disable Loki.   |
-| `LOKI_USERNAME`       | empty       | Optional Loki basic-auth username.                             |
-| `LOKI_PASSWORD`       | empty       | Optional Loki basic-auth password.                             |
-| `LOKI_LABELS`         | empty       | Optional extra Loki labels as `key=value,key2=value2`.         |
-| `LOKI_APP_LABEL`      | `pornhub-archiver` | Value for the Loki `app` label.                         |
-| `LOKI_TIMEOUT`        | `5`         | Seconds to wait when sending a log request to Loki.            |
-| `CONSOLE_COLORS`      | `true`      | Set to `false` to disable ANSI colors in console output.       |
+| Variable              | Default            | Description                                                    |
+|-----------------------|--------------------|----------------------------------------------------------------|
+| `STEP_SLEEP_INTERVAL` | `15`               | Seconds to wait between each channel's metadata/download step. |
+| `SLEEP_INTERVAL`      | `3600`             | Seconds to sleep after each archival run.                      |
+| `DB_HOST`             | `localhost`        | Host running the MariaDB server.                               |
+| `DB_PORT`             | `3306`             | MariaDB server port.                                           |
+| `DB_USER`             | `root`             | Database user used by the archiver.                            |
+| `DB_PASSWORD`         | `root`             | Database password.                                             |
+| `LOKI_URL`            | empty              | Loki base URL or push endpoint. Leave empty to disable Loki.   |
+| `LOKI_USERNAME`       | empty              | Optional Loki basic-auth username.                             |
+| `LOKI_PASSWORD`       | empty              | Optional Loki basic-auth password.                             |
+| `LOKI_LABELS`         | empty              | Optional extra Loki labels as `key=value,key2=value2`.         |
+| `LOKI_APP_LABEL`      | `pornhub-archiver` | Value for the Loki `app` label.                                |
+| `LOKI_TIMEOUT`        | `5`                | Seconds to wait when sending a log request to Loki.            |
+| `CONSOLE_COLORS`      | `true`             | Set to `false` to disable ANSI colors in console output.       |
 
 ## Notes
 
