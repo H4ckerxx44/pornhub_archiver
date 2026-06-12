@@ -268,7 +268,7 @@ class Channel:
             "logger": SilentLogger(),
             "outtmpl": f"{self.channel_path}/[%(id)s] %(title)s.%(ext)s",
             "restrictfilenames": True,
-            "concurrent_fragment_downloads": 1,
+            "concurrent_fragment_downloads": 4,
             "nocheckcertificate": True,
             "retries": 5,
             "fragment_retries": 10,
