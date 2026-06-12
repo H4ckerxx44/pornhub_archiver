@@ -16,9 +16,22 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Generate release notes
-        run: git log --pretty="%s - %an (%h)" > release-notes.md
+        run: |
+          previous_tag="$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)"
+
+          if [ -n "$previous_tag" ]; then
+            {
+              echo "Changes since $previous_tag:"
+              echo
+              git log --pretty="- %s - %an (%h)" "$previous_tag..$GITHUB_REF_NAME"
+            } > release-notes.md
+          else
+            git log --pretty="- %s - %an (%h)" "$GITHUB_REF_NAME" > release-notes.md
+          fi
 
       - name: Create release
         env:
