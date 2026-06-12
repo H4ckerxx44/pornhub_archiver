@@ -25,7 +25,13 @@ ENV SLEEP_INTERVAL=3600 \
     DB_HOST=localhost \
     DB_PORT=3306 \
     DB_USER=root \
-    DB_PASSWORD=root
+    DB_PASSWORD=root \
+    LOKI_URL="" \
+    LOKI_USERNAME="" \
+    LOKI_PASSWORD="" \
+    LOKI_LABELS="" \
+    LOKI_APP_LABEL=pornhub-archiver \
+    LOKI_TIMEOUT=5
 
 WORKDIR /app
 

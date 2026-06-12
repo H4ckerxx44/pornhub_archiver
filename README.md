@@ -32,6 +32,12 @@ Mounting `/data` to a large HDD is highly recommended.
 | `DB_PORT`             | `3306`      | MariaDB server port.                                           |
 | `DB_USER`             | `root`      | Database user used by the archiver.                            |
 | `DB_PASSWORD`         | `root`      | Database password.                                             |
+| `LOKI_URL`            | empty       | Loki base URL or push endpoint. Leave empty to disable Loki.   |
+| `LOKI_USERNAME`       | empty       | Optional Loki basic-auth username.                             |
+| `LOKI_PASSWORD`       | empty       | Optional Loki basic-auth password.                             |
+| `LOKI_LABELS`         | empty       | Optional extra Loki labels as `key=value,key2=value2`.         |
+| `LOKI_APP_LABEL`      | `pornhub-archiver` | Value for the Loki `app` label.                         |
+| `LOKI_TIMEOUT`        | `5`         | Seconds to wait when sending a log batch to Loki.              |
 
 ## Notes
 
@@ -114,6 +120,8 @@ docker run -d \
   -e DB_PASSWORD=root \
   -e SLEEP_INTERVAL=3600 \
   -e STEP_SLEEP_INTERVAL=15 \
+  -e LOKI_URL=http://loki:3100 \
+  -e LOKI_LABELS=env=prod \
   pornhub-archiver
 ```
 

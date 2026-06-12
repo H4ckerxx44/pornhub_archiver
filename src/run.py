@@ -8,12 +8,13 @@ import db
 from archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
 from channel import Channel
 from db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
+from SilentLogger import LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
 
 ROOT_PATH = pathlib.Path(os.getenv("ROOT_PATH", "/data"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
 OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
-VERSION = (4, 0, 1)
+VERSION = (4, 1, 0)
 
 
 async def main() -> None:
@@ -24,7 +25,7 @@ async def main() -> None:
     while True:
         channels = await Channel.get_all_channels(ROOT_PATH)
         await ArchiveJob(channels, ROOT_PATH).archive_all()
-        print(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
+        logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
         await asyncio.sleep(SLEEP_INTERVAL)
 
 
@@ -44,9 +45,13 @@ def _print_startup_info() -> None:
         "DB_PASSWORD":         DB_PASSWORD,
         "SLEEP_INTERVAL":      SLEEP_INTERVAL,
         "STEP_SLEEP_INTERVAL": STEP_SLEEP_INTERVAL,
+        "LOKI_URL":            LOKI_URL,
+        "LOKI_APP_LABEL":      LOKI_APP_LABEL,
+        "LOKI_LABELS":         LOKI_LABELS,
+        "LOKI_TIMEOUT":        LOKI_TIMEOUT,
     }
     for key, value in settings.items():
-        print(f"system - {key}={value}")
+        logger.info(f"system - {key}={value}")
 
 
 async def _update_yt_dlp() -> None:
@@ -58,7 +63,7 @@ async def _update_yt_dlp() -> None:
         stderr=subprocess.DEVNULL,
     )
     new = _yt_dlp_version()
-    print(f"system - yt-dlp {old} → {new}")
+    logger.info(f"system - yt-dlp {old} → {new}")
 
 
 def _yt_dlp_version() -> str:
@@ -74,9 +79,9 @@ async def _ensure_db() -> None:
     table_exists = bool(rows[0][0])
 
     if table_exists:
-        print("system - database table exists")
+        logger.info("system - database table exists")
     else:
-        print("system - creating table")
+        logger.info("system - creating table")
         await db.create_table()
 
 

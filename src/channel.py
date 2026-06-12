@@ -4,7 +4,7 @@ from pathlib import Path
 from yt_dlp import YoutubeDL
 
 import db
-from SilentLogger import SilentLogger
+from SilentLogger import SilentLogger, logger
 from functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si, spacer
 
 _PARTIAL_SUFFIXES = (".part",)
@@ -81,7 +81,7 @@ class Channel:
         total = len(self.missing_videos)
         channel_pct = (current_channel_number / total_channels) * 100
 
-        print(
+        logger.info(
             f"\tchannel - {self.name} ({current_channel_number:,}/{total_channels:,} | {channel_pct:,.2f}%) - "
             f"{total:,} video(s) to archive (existing: {format_si(self.size_before)}) | missing videos: [{", ".join(self.missing_videos)}]"
         )
@@ -91,12 +91,12 @@ class Channel:
                 video_id, i, total, channel_start
             )
             if not success:
-                print(f"\t\tvideo {video_url_from_id(video_id)} errored")
+                logger.error(f"\t\tvideo {video_url_from_id(video_id)} errored")
                 errors += 1
 
         total_size_after = self.size_before + self.size_downloaded
         elapsed = nice_timedelta(datetime.now(UTC), channel_start)
-        print(
+        logger.info(
             f"\t\t{spacer()} RESULT {spacer()}\n"
             f"\t\tdownloaded {format_si(self.size_downloaded)} this run | "
             f"total on disk: {format_si(total_size_after)} "
@@ -172,7 +172,7 @@ class Channel:
             channel_elapsed = nice_timedelta(datetime.now(UTC), channel_start)
             video_pct = ((index + 1) / total) * 100
 
-            print(
+            logger.info(
                 f"\t\tvideo {video_id} ({index + 1:,}/{total:,} | {video_pct:,.2f}%)"
                 f", took {video_elapsed} (channel: {channel_elapsed} so far)"
                 f", size: {format_si(video_size)} (+{format_si(self.size_downloaded)} so far)"
@@ -211,7 +211,7 @@ class Channel:
                     return [video_id_from_link(e["url"]) for e in info["entries"]], False
                 except Exception:
                         self.error_count += 1
-                        print(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
+                        logger.warning(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
             return [], True
 
     def _scan_disk(self) -> None:
@@ -294,6 +294,6 @@ class Channel:
     def _normalize_link(link: str) -> str:
         for suffix in _LINK_SUFFIXES:
             if link.endswith(suffix):
-                print(f"WRONG PATH FORMAT - {link} ends with '{suffix}'")
+                logger.warning(f"WRONG PATH FORMAT - {link} ends with '{suffix}'")
                 return link[: -len(suffix)]
         return link
