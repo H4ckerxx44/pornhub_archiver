@@ -1,11 +1,10 @@
-import base64
-import json
+import asyncio
 import os
 import socket
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime, UTC
+
+import aiohttp
 
 
 def _float_env(name: str, default: float) -> float:
@@ -33,7 +32,7 @@ class LokiClient:
     def enabled(self) -> bool:
         return bool(self.url)
 
-    def send(self, level: str, msg: str) -> None:
+    async def send(self, level: str, msg: str) -> None:
         if not self.enabled():
             return
 
@@ -47,29 +46,22 @@ class LokiClient:
             ]
         }
 
-        data = json.dumps(payload).encode("utf-8")
-        request = urllib.request.Request(
-            self.url,
-            data=data,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": "pornhub-archiver",
-            },
-            method="POST",
-        )
-
+        auth = None
         if LOKI_USERNAME or LOKI_PASSWORD:
-            credentials = f"{LOKI_USERNAME}:{LOKI_PASSWORD}".encode("utf-8")
-            token = base64.b64encode(credentials).decode("ascii")
-            request.add_header("Authorization", f"Basic {token}")
+            auth = aiohttp.BasicAuth(LOKI_USERNAME, LOKI_PASSWORD)
 
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout):
-                pass
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            timeout = aiohttp.ClientTimeout(total=self.timeout)
+            headers = {"User-Agent": "pornhub-archiver"}
+            async with aiohttp.ClientSession(timeout=timeout, headers=headers, auth=auth) as session:
+                async with session.post(self.url, json=payload) as response:
+                    if response.status >= 400:
+                        text = await response.text()
+                        self._print_warning_once(f"HTTP {response.status}: {text[:200]}")
+        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as exc:
             self._print_warning_once(exc)
 
-    def _print_warning_once(self, exc: Exception) -> None:
+    def _print_warning_once(self, exc: Exception | str) -> None:
         if self._warning_printed:
             return
         self._warning_printed = True
@@ -125,7 +117,28 @@ class SilentLogger:
         msg = str(msg)
         if self.send_to_console:
             print(msg, flush=True)
-        _loki.send(level, msg)
+        self._send_to_loki(level, msg)
+
+    @staticmethod
+    def _send_to_loki(level: str, msg: str) -> None:
+        if not _loki.enabled():
+            return
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(_loki.send(level, msg))
+            return
+
+        task = loop.create_task(_loki.send(level, msg))
+        task.add_done_callback(SilentLogger._consume_loki_task_exception)
+
+    @staticmethod
+    def _consume_loki_task_exception(task: asyncio.Task) -> None:
+        try:
+            task.result()
+        except Exception as exc:
+            _loki._print_warning_once(exc)
 
 
 class AppLogger(SilentLogger):

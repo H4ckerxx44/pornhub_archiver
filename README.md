@@ -37,7 +37,7 @@ Mounting `/data` to a large HDD is highly recommended.
 | `LOKI_PASSWORD`       | empty       | Optional Loki basic-auth password.                             |
 | `LOKI_LABELS`         | empty       | Optional extra Loki labels as `key=value,key2=value2`.         |
 | `LOKI_APP_LABEL`      | `pornhub-archiver` | Value for the Loki `app` label.                         |
-| `LOKI_TIMEOUT`        | `5`         | Seconds to wait when sending a log batch to Loki.              |
+| `LOKI_TIMEOUT`        | `5`         | Seconds to wait when sending a log request to Loki.            |
 
 ## Notes
 

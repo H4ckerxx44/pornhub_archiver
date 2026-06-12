@@ -47,6 +47,7 @@ RUN apk add --no-cache \
 COPY --from=phantomjs /usr/local/bin/phantomjs /usr/local/bin/phantomjs
 
 RUN pip install \
+        aiohttp \
         aiomysql \
         "yt-dlp[default,curl-cffi]"
 
