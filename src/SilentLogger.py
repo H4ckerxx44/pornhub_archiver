@@ -14,12 +14,30 @@ def _float_env(name: str, default: float) -> float:
         return default
 
 
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
 LOKI_URL = os.getenv("LOKI_URL", "").strip()
 LOKI_USERNAME = os.getenv("LOKI_USERNAME", "").strip()
 LOKI_PASSWORD = os.getenv("LOKI_PASSWORD", "").strip()
 LOKI_LABELS = os.getenv("LOKI_LABELS", "").strip()
 LOKI_APP_LABEL = os.getenv("LOKI_APP_LABEL", "pornhub-archiver").strip()
 LOKI_TIMEOUT = _float_env("LOKI_TIMEOUT", 5)
+CONSOLE_COLORS = _bool_env("CONSOLE_COLORS", True)
+
+_RESET = "\033[0m"
+_BOLD = "\033[1m"
+_DIM = "\033[2m"
+_LEVEL_COLORS = {
+    "debug": "\033[90m",
+    "info": "\033[36m",
+    "warning": "\033[33m",
+    "error": "\033[31m",
+}
 
 
 class LokiClient:
@@ -66,7 +84,8 @@ class LokiClient:
             return
         self._warning_printed = True
         timestamp = datetime.now(UTC).isoformat()
-        print(f"{timestamp} system - failed to send logs to Loki: {exc}", flush=True)
+        msg = f"{timestamp} system - failed to send logs to Loki: {exc}"
+        print(SilentLogger.colorize("warning", msg), flush=True)
 
     @staticmethod
     def _push_url(url: str) -> str:
@@ -116,8 +135,25 @@ class SilentLogger:
     def _log(self, level: str, msg: str) -> None:
         msg = str(msg)
         if self.send_to_console:
-            print(msg, flush=True)
+            print(self.colorize(level, msg), flush=True)
         self._send_to_loki(level, msg)
+
+    @staticmethod
+    def colorize(level: str, msg: str) -> str:
+        if not CONSOLE_COLORS:
+            return msg
+
+        color = _LEVEL_COLORS.get(level.lower())
+        if not color:
+            return msg
+
+        if level.lower() in ("warning", "error"):
+            return f"{_BOLD}{color}{msg}{_RESET}"
+
+        if level.lower() == "debug":
+            return f"{_DIM}{color}{msg}{_RESET}"
+
+        return f"{color}{msg}{_RESET}"
 
     @staticmethod
     def _send_to_loki(level: str, msg: str) -> None:

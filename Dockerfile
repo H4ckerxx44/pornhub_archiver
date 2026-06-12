@@ -31,7 +31,8 @@ ENV SLEEP_INTERVAL=3600 \
     LOKI_PASSWORD="" \
     LOKI_LABELS="" \
     LOKI_APP_LABEL=pornhub-archiver \
-    LOKI_TIMEOUT=5
+    LOKI_TIMEOUT=5 \
+    CONSOLE_COLORS=true
 
 WORKDIR /app
 
