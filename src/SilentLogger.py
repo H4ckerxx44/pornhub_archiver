@@ -45,13 +45,38 @@ class LokiClient:
         self.url = self._push_url(LOKI_URL)
         self.labels = self._labels()
         self.timeout = LOKI_TIMEOUT
+        self.session: aiohttp.ClientSession | None = None
         self._warning_printed = False
+        self._not_started_warning_printed = False
 
     def enabled(self) -> bool:
         return bool(self.url)
 
+    async def start(self) -> None:
+        if not self.enabled() or self.session is not None:
+            return
+
+        auth = None
+        if LOKI_USERNAME or LOKI_PASSWORD:
+            auth = aiohttp.BasicAuth(LOKI_USERNAME, LOKI_PASSWORD)
+
+        timeout = aiohttp.ClientTimeout(total=self.timeout)
+        headers = {"User-Agent": "pornhub-archiver"}
+        self.session = aiohttp.ClientSession(timeout=timeout, headers=headers, auth=auth)
+
+    async def close(self) -> None:
+        if self.session is None:
+            return
+
+        await self.session.close()
+        self.session = None
+
     async def send(self, level: str, msg: str) -> None:
         if not self.enabled():
+            return
+
+        if self.session is None:
+            self.print_not_started_warning_once()
             return
 
         labels = self.labels | {"level": level.lower()}
@@ -64,22 +89,24 @@ class LokiClient:
             ]
         }
 
-        auth = None
-        if LOKI_USERNAME or LOKI_PASSWORD:
-            auth = aiohttp.BasicAuth(LOKI_USERNAME, LOKI_PASSWORD)
-
         try:
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
-            headers = {"User-Agent": "pornhub-archiver"}
-            async with aiohttp.ClientSession(timeout=timeout, headers=headers, auth=auth) as session:
-                async with session.post(self.url, json=payload) as response:
-                    if response.status >= 400:
-                        text = await response.text()
-                        self._print_warning_once(f"HTTP {response.status}: {text[:200]}")
+            async with self.session.post(self.url, json=payload) as response:
+                if response.status >= 400:
+                    text = await response.text()
+                    self.print_warning_once(f"HTTP {response.status}: {text[:200]}")
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as exc:
-            self._print_warning_once(exc)
+            self.print_warning_once(exc)
 
-    def _print_warning_once(self, exc: Exception | str) -> None:
+    def print_not_started_warning_once(self) -> None:
+        if self._not_started_warning_printed:
+            return
+        self._not_started_warning_printed = True
+        print(
+            SilentLogger.format_console_message("warning", "system - Loki logger was not started; dropping Loki messages"),
+            flush=True,
+        )
+
+    def print_warning_once(self, exc: Exception | str) -> None:
         if self._warning_printed:
             return
         self._warning_printed = True
@@ -116,8 +143,20 @@ class LokiClient:
 
 
 class SilentLogger:
+    _pending_loki_tasks: set[asyncio.Task] = set()
+
     def __init__(self, send_to_console: bool = False) -> None:
         self.send_to_console = send_to_console
+
+    @staticmethod
+    async def start() -> None:
+        await _loki.start()
+
+    @staticmethod
+    async def stop() -> None:
+        if SilentLogger._pending_loki_tasks:
+            await asyncio.gather(*SilentLogger._pending_loki_tasks, return_exceptions=True)
+        await _loki.close()
 
     def debug(self, msg: str) -> None:
         self._log("debug", msg)
@@ -160,26 +199,27 @@ class SilentLogger:
 
         return f"{color}{msg}{_RESET}"
 
-    @staticmethod
-    def _send_to_loki(level: str, msg: str) -> None:
+    def _send_to_loki(self, level: str, msg: str) -> None:
         if not _loki.enabled():
             return
 
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
-            asyncio.run(_loki.send(level, msg))
+            _loki.print_not_started_warning_once()
             return
 
         task = loop.create_task(_loki.send(level, msg))
-        task.add_done_callback(SilentLogger._consume_loki_task_exception)
+        SilentLogger._pending_loki_tasks.add(task)
+        task.add_done_callback(self._consume_loki_task_exception)
 
     @staticmethod
     def _consume_loki_task_exception(task: asyncio.Task) -> None:
+        SilentLogger._pending_loki_tasks.discard(task)
         try:
             task.result()
         except Exception as exc:
-            _loki._print_warning_once(exc)
+            _loki.print_warning_once(exc)
 
 
 class AppLogger(SilentLogger):

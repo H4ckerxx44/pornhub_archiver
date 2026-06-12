@@ -18,15 +18,19 @@ VERSION = (4, 1, 0)
 
 
 async def main() -> None:
-    _print_startup_info()
-    await _update_yt_dlp()
-    await _ensure_db()
+    await logger.start()
+    try:
+        _print_startup_info()
+        await _update_yt_dlp()
+        await _ensure_db()
 
-    while True:
-        channels = await Channel.get_all_channels(ROOT_PATH)
-        await ArchiveJob(channels, ROOT_PATH).archive_all()
-        logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
-        await asyncio.sleep(SLEEP_INTERVAL)
+        while True:
+            channels = await Channel.get_all_channels(ROOT_PATH)
+            await ArchiveJob(channels, ROOT_PATH).archive_all()
+            logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
+            await asyncio.sleep(SLEEP_INTERVAL)
+    finally:
+        await logger.stop()
 
 
 # -----------------------------------------------------------------------------
