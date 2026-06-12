@@ -50,6 +50,7 @@ COPY --from=phantomjs /usr/local/bin/phantomjs /usr/local/bin/phantomjs
 RUN pip install \
         aiohttp \
         aiomysql \
+        arrow \
         "yt-dlp[default,curl-cffi]"
 
 COPY . /app/

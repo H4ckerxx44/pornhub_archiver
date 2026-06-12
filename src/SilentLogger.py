@@ -2,9 +2,9 @@ import asyncio
 import os
 import socket
 import time
-from datetime import datetime, UTC
 
 import aiohttp
+import arrow
 
 
 def _float_env(name: str, default: float) -> float:
@@ -83,9 +83,8 @@ class LokiClient:
         if self._warning_printed:
             return
         self._warning_printed = True
-        timestamp = datetime.now(UTC).isoformat()
-        msg = f"{timestamp} system - failed to send logs to Loki: {exc}"
-        print(SilentLogger.colorize("warning", msg), flush=True)
+        msg = f"system - failed to send logs to Loki: {exc}"
+        print(SilentLogger.format_console_message("warning", msg), flush=True)
 
     @staticmethod
     def _push_url(url: str) -> str:
@@ -135,8 +134,14 @@ class SilentLogger:
     def _log(self, level: str, msg: str) -> None:
         msg = str(msg)
         if self.send_to_console:
-            print(self.colorize(level, msg), flush=True)
+            print(self.format_console_message(level, msg), flush=True)
         self._send_to_loki(level, msg)
+
+    @staticmethod
+    def format_console_message(level: str, msg: str) -> str:
+        timestamp = arrow.utcnow().format("YYYY-MM-DD HH:mm:ss ZZ")
+        level_name = level.upper().ljust(7)
+        return SilentLogger.colorize(level, f"{timestamp} {level_name} {msg}")
 
     @staticmethod
     def colorize(level: str, msg: str) -> str:
