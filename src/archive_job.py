@@ -11,12 +11,12 @@ STEP_SLEEP_INTERVAL = int(os.getenv("STEP_SLEEP_INTERVAL", 15))
 
 
 class ArchiveJob:
-    def __init__(self, channels: list[Channel], root_path: Path):
+    def __init__(self, channels: list[Channel], data_path: Path):
         self.archived_data: int = 0
         self.total_archived: int = 0
         self.channels = channels
         self.start = datetime.now(UTC)
-        self.root_path = root_path
+        self.data_path = data_path
 
     # -------------------------------------------------------------------------
     # Public API

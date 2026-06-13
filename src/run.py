@@ -10,7 +10,7 @@ from channel import Channel
 from db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
 from SilentLogger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
 
-ROOT_PATH = pathlib.Path(os.getenv("ROOT_PATH", "/data"))
+DATA_PATH = pathlib.Path(os.getenv("DATA_PATH", "/data"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
 OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
@@ -25,8 +25,8 @@ async def main() -> None:
         await _ensure_db()
 
         while True:
-            channels = await Channel.get_all_channels(ROOT_PATH)
-            await ArchiveJob(channels, ROOT_PATH).archive_all()
+            channels = await Channel.get_all_channels(DATA_PATH)
+            await ArchiveJob(channels, DATA_PATH).archive_all()
             logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
             await asyncio.sleep(SLEEP_INTERVAL)
     finally:
@@ -42,7 +42,7 @@ def _print_startup_info() -> None:
     settings = {
         "version":             f"v{version_str}",
         "OPENSSL_CONF":        OPENSSL_CONF,
-        "ROOT_PATH":           ROOT_PATH,
+        "DATA_PATH":           DATA_PATH,
         "DB_HOST":             DB_HOST,
         "DB_PORT":             DB_PORT,
         "DB_USER":             DB_USER,

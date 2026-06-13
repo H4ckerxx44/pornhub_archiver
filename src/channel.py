@@ -23,7 +23,7 @@ class Channel:
             archived_videos: int,
             added_on: datetime,
             last_queried_at: datetime,
-            root_path: Path,
+            data_path: Path,
     ):
         self.db_id = db_id
         self.link = link
@@ -31,9 +31,9 @@ class Channel:
         self.archived_videos = archived_videos
         self.added_on = added_on
         self.last_queried_at = last_queried_at
-        self.root_path = root_path
+        self.data_path = data_path
         self.name = link.split("/")[-1]
-        self.channel_path = root_path / self.name
+        self.channel_path = data_path / self.name
         self.videos_on_disk: dict[str, bool] = {}
         self.missing_videos: list[str] = []
         self.offline_videos: list[str] = []
@@ -110,12 +110,12 @@ class Channel:
     # -------------------------------------------------------------------------
 
     @classmethod
-    async def get_all_channels(cls, root_path: Path) -> list["Channel"]:
+    async def get_all_channels(cls, data_path: Path) -> list["Channel"]:
         rows = await db.execute_query(
             "select id, link, added_on, last_queried_at, total_videos, archived_videos "
             "from channels where is_active=1 order by link"
         )
-        return [cls._from_row(row, root_path) for row in rows]
+        return [cls._from_row(row, data_path) for row in rows]
 
     # -------------------------------------------------------------------------
     # DB helpers
@@ -286,10 +286,10 @@ class Channel:
         return file.suffix == ".part" or ".part-Frag" in file.name
 
     @classmethod
-    def _from_row(cls, row: tuple, root_path: Path) -> "Channel":
+    def _from_row(cls, row: tuple, data_path: Path) -> "Channel":
         db_id, link, added_on, last_queried_at, total_videos, archived_videos = row
         link = cls._normalize_link(link)
-        return cls(db_id, link, total_videos, archived_videos, added_on, last_queried_at, root_path)
+        return cls(db_id, link, total_videos, archived_videos, added_on, last_queried_at, data_path)
 
     @staticmethod
     def _normalize_link(link: str) -> str:
