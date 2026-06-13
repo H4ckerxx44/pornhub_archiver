@@ -1,7 +1,9 @@
 import asyncio
 import os
+import pathlib
 import socket
 import time
+from collections.abc import Mapping
 
 import aiohttp
 import arrow
@@ -21,13 +23,14 @@ def _bool_env(name: str, default: bool) -> bool:
     return value.strip().lower() in ("1", "true", "yes", "on")
 
 
-LOKI_URL = os.getenv("LOKI_URL", "").strip()
-LOKI_USERNAME = os.getenv("LOKI_USERNAME", "").strip()
-LOKI_PASSWORD = os.getenv("LOKI_PASSWORD", "").strip()
-LOKI_LABELS = os.getenv("LOKI_LABELS", "").strip()
-LOKI_APP_LABEL = os.getenv("LOKI_APP_LABEL", "pornhub-archiver").strip()
-LOKI_TIMEOUT = _float_env("LOKI_TIMEOUT", 5)
-CONSOLE_COLORS = _bool_env("CONSOLE_COLORS", True)
+LOKI_URL: str = os.getenv("LOKI_URL", "").strip()
+LOKI_USERNAME: str = os.getenv("LOKI_USERNAME", "").strip()
+LOKI_PASSWORD: str = os.getenv("LOKI_PASSWORD", "").strip()
+LOKI_LABELS: str = os.getenv("LOKI_LABELS", "").strip()
+LOKI_APP_LABEL: str = os.getenv("LOKI_APP_LABEL", "pornhub-archiver").strip()
+LOKI_TIMEOUT: float = _float_env("LOKI_TIMEOUT", 5)
+LOG_PATH: str = os.getenv("LOG_PATH", "/logs").strip()
+CONSOLE_COLORS: bool = _bool_env("CONSOLE_COLORS", True)
 
 _RESET: str = "\033[0m"
 _BOLD: str = "\033[1m"
@@ -56,8 +59,8 @@ class LokiClient:
         if not self.enabled() or self.session is not None:
             return
 
-        auth = None
-        if LOKI_USERNAME or LOKI_PASSWORD:
+        auth: aiohttp.BasicAuth | None = None
+        if LOKI_USERNAME and LOKI_PASSWORD:
             auth = aiohttp.BasicAuth(LOKI_USERNAME, LOKI_PASSWORD)
 
         timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=self.timeout)
@@ -150,6 +153,7 @@ class SilentLogger:
 
     @staticmethod
     async def start() -> None:
+        _file_log_sink.start()
         await _loki.start()
 
     @staticmethod
@@ -157,6 +161,7 @@ class SilentLogger:
         if SilentLogger._pending_loki_tasks:
             await asyncio.gather(*SilentLogger._pending_loki_tasks, return_exceptions=True)
         await _loki.close()
+        _file_log_sink.close()
 
     def debug(self, msg: str) -> None:
         self._log("debug", msg)
@@ -174,13 +179,19 @@ class SilentLogger:
         msg = str(msg)
         if self.send_to_console:
             print(self.format_console_message(level, msg), flush=True)
+        _file_log_sink.write(level, msg)
         self._send_to_loki(level, msg)
 
     @staticmethod
     def format_console_message(level: str, msg: str) -> str:
+        return SilentLogger.format_message(level, msg, colors=CONSOLE_COLORS)
+
+    @staticmethod
+    def format_message(level: str, msg: str, colors: bool) -> str:
         timestamp = arrow.utcnow().format("YYYY-MM-DD HH:mm:ss ZZ")
         level_name = level.upper().ljust(7)
-        return SilentLogger.colorize(level, f"{timestamp} {level_name} {msg}")
+        formatted = f"[{timestamp}] [{level_name}] {msg}"
+        return SilentLogger.colorize(level, formatted) if colors else formatted
 
     @staticmethod
     def colorize(level: str, msg: str) -> str:
@@ -222,10 +233,73 @@ class SilentLogger:
             _loki.print_warning_once(exc)
 
 
+class FileLogSink:
+    def __init__(self) -> None:
+        self.path: pathlib.Path | None = pathlib.Path(LOG_PATH) if LOG_PATH else None
+        self.file_path: pathlib.Path | None = None
+        self._warning_printed: bool = False
+
+    def enabled(self) -> bool:
+        return self.path is not None
+
+    def start(self) -> None:
+        if not self.enabled() or self.file_path is not None:
+            return
+
+        self.file_path = self._new_file_path()
+        if self.file_path is None:
+            return
+
+        self._create_file()
+
+    def _new_file_path(self) -> pathlib.Path | None:
+        if self.path is None:
+            return None
+
+        try:
+            self.path.mkdir(parents=True, exist_ok=True)
+            return self.path / arrow.utcnow().format("YYYY-MM-DD HH:mm:ss")
+        except OSError as exc:
+            self.print_warning_once(exc)
+            return None
+
+    def _create_file(self) -> None:
+        if self.file_path is None:
+            return
+
+        try:
+            with self.file_path.open("a", encoding="utf-8"):
+                pass
+        except OSError as exc:
+            self.file_path = None
+            self.print_warning_once(exc)
+
+    def close(self) -> None:
+        self.file_path = None
+
+    def write(self, level: str, msg: str) -> None:
+        if not self.enabled() or self.file_path is None:
+            return
+
+        try:
+            with self.file_path.open("a", encoding="utf-8") as file:
+                print(SilentLogger.format_message(level, msg, colors=False), file=file, flush=True)
+        except OSError as exc:
+            self.print_warning_once(exc)
+
+    def print_warning_once(self, exc: Exception | str) -> None:
+        if self._warning_printed:
+            return
+        self._warning_printed = True
+        msg = f"system - failed to write local log file: {exc}"
+        print(SilentLogger.format_console_message("warning", msg), flush=True)
+
+
 class AppLogger(SilentLogger):
     def __init__(self, send_to_console: bool) -> None:
         super().__init__(send_to_console=send_to_console)
 
 
+_file_log_sink: FileLogSink = FileLogSink()
 _loki: LokiClient = LokiClient()
 logger: AppLogger = AppLogger(send_to_console=True)

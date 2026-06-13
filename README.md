@@ -38,6 +38,7 @@ Mounting `/data` to a large HDD is highly recommended.
 | `LOKI_LABELS`         | empty              | Optional extra Loki labels as `key=value,key2=value2`.         |
 | `LOKI_APP_LABEL`      | `pornhub-archiver` | Value for the Loki `app` label.                                |
 | `LOKI_TIMEOUT`        | `5`                | Seconds to wait when sending a log request to Loki.            |
+| `LOG_PATH`            | `/logs`            | Directory for local log files. Set empty to disable file logs. |
 | `CONSOLE_COLORS`      | `true`             | Set to `false` to disable ANSI colors in console output.       |
 
 ## Notes
@@ -80,6 +81,7 @@ VALUES ('https://www.pornhub.com/model/example-name');
 ## Storage Layout
 
 Downloaded content is written under `/data`.
+Local log files are written under `/logs` and named with the container startup time in `YYYY-MM-DD HH:mm:ss` format.
 
 For a channel URL like:
 
@@ -115,6 +117,7 @@ Run it:
 docker run -d \
   --name pornhub-archiver \
   -v /path/to/archive:/data \
+  -v /path/to/logs:/logs \
   -e DB_HOST=host.docker.internal \
   -e DB_PORT=3306 \
   -e DB_USER=root \

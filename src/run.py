@@ -8,7 +8,7 @@ import db
 from archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
 from channel import Channel
 from db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
-from SilentLogger import CONSOLE_COLORS, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
+from SilentLogger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
 
 ROOT_PATH = pathlib.Path(os.getenv("ROOT_PATH", "/data"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
@@ -53,6 +53,7 @@ def _print_startup_info() -> None:
         "LOKI_APP_LABEL":      LOKI_APP_LABEL,
         "LOKI_LABELS":         LOKI_LABELS,
         "LOKI_TIMEOUT":        LOKI_TIMEOUT,
+        "LOG_PATH":            LOG_PATH,
         "CONSOLE_COLORS":      CONSOLE_COLORS,
     }
     for key, value in settings.items():
