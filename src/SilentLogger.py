@@ -29,10 +29,10 @@ LOKI_APP_LABEL = os.getenv("LOKI_APP_LABEL", "pornhub-archiver").strip()
 LOKI_TIMEOUT = _float_env("LOKI_TIMEOUT", 5)
 CONSOLE_COLORS = _bool_env("CONSOLE_COLORS", True)
 
-_RESET = "\033[0m"
-_BOLD = "\033[1m"
-_DIM = "\033[2m"
-_LEVEL_COLORS = {
+_RESET: str = "\033[0m"
+_BOLD: str = "\033[1m"
+_DIM: str = "\033[2m"
+_LEVEL_COLORS: Mapping[str, str] = {
     "debug": "\033[90m",
     "info": "\033[36m",
     "warning": "\033[33m",
@@ -42,12 +42,12 @@ _LEVEL_COLORS = {
 
 class LokiClient:
     def __init__(self) -> None:
-        self.url = self._push_url(LOKI_URL)
-        self.labels = self._labels()
-        self.timeout = LOKI_TIMEOUT
+        self.url: str = self._push_url(LOKI_URL)
+        self.labels: dict[str, str] = self._labels()
+        self.timeout: float = LOKI_TIMEOUT
         self.session: aiohttp.ClientSession | None = None
-        self._warning_printed = False
-        self._not_started_warning_printed = False
+        self._warning_printed: bool = False
+        self._not_started_warning_printed: bool = False
 
     def enabled(self) -> bool:
         return bool(self.url)
@@ -60,8 +60,8 @@ class LokiClient:
         if LOKI_USERNAME or LOKI_PASSWORD:
             auth = aiohttp.BasicAuth(LOKI_USERNAME, LOKI_PASSWORD)
 
-        timeout = aiohttp.ClientTimeout(total=self.timeout)
-        headers = {"User-Agent": "pornhub-archiver"}
+        timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=self.timeout)
+        headers: dict[str, str] = {"User-Agent": "pornhub-archiver"}
         self.session = aiohttp.ClientSession(timeout=timeout, headers=headers, auth=auth)
 
     async def close(self) -> None:
@@ -79,8 +79,8 @@ class LokiClient:
             self.print_not_started_warning_once()
             return
 
-        labels = self.labels | {"level": level.lower()}
-        payload = {
+        labels: dict[str, str] = self.labels | {"level": level.lower()}
+        payload: dict[str, list[dict[str, object]]] = {
             "streams": [
                 {
                     "stream": labels,
@@ -122,7 +122,7 @@ class LokiClient:
 
     @staticmethod
     def _labels() -> dict[str, str]:
-        labels = {
+        labels: dict[str, str] = {
             "app": LOKI_APP_LABEL or "pornhub-archiver",
             "host": socket.gethostname(),
         }
@@ -143,10 +143,10 @@ class LokiClient:
 
 
 class SilentLogger:
-    _pending_loki_tasks: set[asyncio.Task] = set()
+    _pending_loki_tasks: set[asyncio.Task[None]] = set()
 
     def __init__(self, send_to_console: bool = False) -> None:
-        self.send_to_console = send_to_console
+        self.send_to_console: bool = send_to_console
 
     @staticmethod
     async def start() -> None:
@@ -204,17 +204,17 @@ class SilentLogger:
             return
 
         try:
-            loop = asyncio.get_running_loop()
+            loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
         except RuntimeError:
             _loki.print_not_started_warning_once()
             return
 
-        task = loop.create_task(_loki.send(level, msg))
+        task: asyncio.Task[None] = loop.create_task(_loki.send(level, msg))
         SilentLogger._pending_loki_tasks.add(task)
         task.add_done_callback(self._consume_loki_task_exception)
 
     @staticmethod
-    def _consume_loki_task_exception(task: asyncio.Task) -> None:
+    def _consume_loki_task_exception(task: asyncio.Task[None]) -> None:
         SilentLogger._pending_loki_tasks.discard(task)
         try:
             task.result()
@@ -227,5 +227,5 @@ class AppLogger(SilentLogger):
         super().__init__(send_to_console=send_to_console)
 
 
-_loki = LokiClient()
-logger = AppLogger(send_to_console=True)
+_loki: LokiClient = LokiClient()
+logger: AppLogger = AppLogger(send_to_console=True)
