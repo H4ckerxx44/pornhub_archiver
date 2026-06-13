@@ -265,7 +265,7 @@ class Channel:
             "no_warnings": True,
             "extract_flat": True,
             "logtostderr": False,
-            "logger": SilentLogger(),
+            "logger": SilentLogger(send_to_file=False, send_to_loki=False),
             "outtmpl": f"{self.channel_path}/[%(id)s] %(title)s.%(ext)s",
             "restrictfilenames": True,
             "concurrent_fragment_downloads": 4,

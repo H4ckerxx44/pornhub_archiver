@@ -142,8 +142,15 @@ class LokiClient:
 class SilentLogger:
     _pending_loki_tasks: set[asyncio.Task[None]] = set()
 
-    def __init__(self, send_to_console: bool = False) -> None:
+    def __init__(
+            self,
+            send_to_console: bool = False,
+            send_to_file: bool = True,
+            send_to_loki: bool = True,
+    ) -> None:
         self.send_to_console: bool = send_to_console
+        self.send_to_file: bool = send_to_file
+        self.send_to_loki: bool = send_to_loki
 
     @staticmethod
     async def start() -> None:
@@ -173,8 +180,10 @@ class SilentLogger:
         msg = str(msg)
         if self.send_to_console:
             print(self.format_console_message(level, msg), flush=True)
-        _file_log_sink.write(level, msg)
-        self._send_to_loki(level, msg)
+        if self.send_to_file:
+            _file_log_sink.write(level, msg)
+        if self.send_to_loki:
+            self._send_to_loki(level, msg)
 
     @staticmethod
     def format_console_message(level: str, msg: str) -> str:
@@ -291,7 +300,7 @@ class FileLogSink:
 
 class AppLogger(SilentLogger):
     def __init__(self, send_to_console: bool) -> None:
-        super().__init__(send_to_console=send_to_console)
+        super().__init__(send_to_console=send_to_console, send_to_file=True, send_to_loki=True)
 
 
 _file_log_sink: FileLogSink = FileLogSink()
