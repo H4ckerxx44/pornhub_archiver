@@ -96,14 +96,12 @@ class Channel:
 
         total_size_after = self.size_before + self.size_downloaded
         elapsed = nice_timedelta(datetime.now(UTC), channel_start)
-        await logger.info(
-            f"\t\t{spacer()} RESULT {spacer()}\n"
-            f"\t\tdownloaded {format_si(self.size_downloaded)} this run | "
-            f"total on disk: {format_si(total_size_after)} "
-            f"(was {format_si(self.size_before)} + {format_si(self.size_downloaded)} => {format_si(total_size_after)}\n"
-            f"\t\ttook {elapsed} | archived: {self.archived_this_time:,} | errors: {errors:,}\n"
-            f"\t\taverage download speed: {(self.size_downloaded / elapsed.total_seconds())/1024/1024:,.4f} MiB/s\n"
-        )
+
+        await logger.info(f"\t\t{spacer()} RESULT {spacer()}")
+        await logger.info(f"\t\tdownloaded {format_si(self.size_downloaded)} this run")
+        await logger.info(f"\t\ttotal on disk: {format_si(total_size_after)} (was {format_si(self.size_before)} + {format_si(self.size_downloaded)} => {format_si(total_size_after)}")
+        await logger.info(f"\t\ttook {elapsed} | archived: {self.archived_this_time:,} | errors: {errors:,}")
+        await logger.info(f"\t\taverage download speed: {(self.size_downloaded / elapsed.total_seconds())/1024/1024:,.4f} MiB/s")
 
     # -------------------------------------------------------------------------
     # Class methods
