@@ -111,7 +111,7 @@ class Channel:
     async def get_all_channels(cls, data_path: Path) -> list["Channel"]:
         rows = await db.execute_query(
             "select id, link, added_on, last_queried_at, total_videos, archived_videos "
-            "from channels2 where is_active=1 order by link"
+            "from channels where is_active=1 order by link"
         )
         return [await cls._from_row(row, data_path) for row in rows]
 
@@ -121,20 +121,20 @@ class Channel:
 
     async def _update_last_queried(self) -> None:
         await db.execute_query(
-            "update channels2 set last_queried_at=%s where link=%s",
+            "update channels set last_queried_at=%s where link=%s",
             (datetime.now(UTC), self.link),
         )
 
     async def _set_total_videos(self, count: int) -> None:
         self.total_videos = count
         await db.execute_query(
-            "update channels2 set total_videos=%s where link=%s",
+            "update channels set total_videos=%s where link=%s",
             (count, self.link),
         )
 
     async def _set_archived_video_count(self) -> None:
         await db.execute_query(
-            "update channels2 set archived_videos=%s where link=%s",
+            "update channels set archived_videos=%s where link=%s",
             (len(self.videos_on_disk), self.link),
         )
 
@@ -142,7 +142,7 @@ class Channel:
         self.archived_videos += 1
         self.archived_this_time += 1
         await db.execute_query(
-            "update channels2 set archived_videos=archived_videos+1 where link=%s",
+            "update channels set archived_videos=archived_videos+1 where link=%s",
             (self.link,),
         )
 
