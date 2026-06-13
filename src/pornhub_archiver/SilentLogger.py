@@ -140,8 +140,6 @@ class LokiClient:
 
 
 class SilentLogger:
-    _pending_loki_tasks: set[asyncio.Task[None]] = set()
-
     def __init__(
             self,
             send_to_console: bool = False,
@@ -159,31 +157,29 @@ class SilentLogger:
 
     @staticmethod
     async def stop() -> None:
-        if SilentLogger._pending_loki_tasks:
-            await asyncio.gather(*SilentLogger._pending_loki_tasks, return_exceptions=True)
         await _loki.close()
         _file_log_sink.close()
 
-    def debug(self, msg: str) -> None:
-        self._log("debug", msg)
+    async def debug(self, msg: str) -> None:
+        await self._log("debug", msg)
 
-    def info(self, msg: str) -> None:
-        self._log("info", msg)
+    async def info(self, msg: str) -> None:
+        await self._log("info", msg)
 
-    def warning(self, msg: str) -> None:
-        self._log("warning", msg)
+    async def warning(self, msg: str) -> None:
+        await self._log("warning", msg)
 
-    def error(self, msg: str) -> None:
-        self._log("error", msg)
+    async def error(self, msg: str) -> None:
+        await self._log("error", msg)
 
-    def _log(self, level: str, msg: str) -> None:
+    async def _log(self, level: str, msg: str) -> None:
         msg = str(msg)
         if self.send_to_console:
             print(self.format_console_message(level, msg), flush=True)
         if self.send_to_file:
             _file_log_sink.write(level, self._format_for_non_console_log(msg))
         if self.send_to_loki:
-            self._send_to_loki(level, self._format_for_non_console_log(msg))
+            await self._send_to_loki(level, self._format_for_non_console_log(msg))
 
     @staticmethod
     def format_console_message(level: str, msg: str) -> str:
@@ -217,27 +213,9 @@ class SilentLogger:
     def _format_for_non_console_log(msg: str) -> str:
         return msg.lstrip(" \t")
 
-    def _send_to_loki(self, level: str, msg: str) -> None:
-        if not _loki.enabled():
-            return
-
-        try:
-            loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-        except RuntimeError:
-            _loki.print_not_started_warning()
-            return
-
-        task: asyncio.Task[None] = loop.create_task(_loki.send(level, msg))
-        SilentLogger._pending_loki_tasks.add(task)
-        task.add_done_callback(self._consume_loki_task_exception)
-
     @staticmethod
-    def _consume_loki_task_exception(task: asyncio.Task[None]) -> None:
-        SilentLogger._pending_loki_tasks.discard(task)
-        try:
-            task.result()
-        except Exception as exc:
-            _loki.print_warning(exc)
+    async def _send_to_loki(level: str, msg: str) -> None:
+        await _loki.send(level, msg)
 
 
 class FileLogSink:

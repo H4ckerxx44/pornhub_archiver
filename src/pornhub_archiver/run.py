@@ -20,14 +20,14 @@ VERSION = (4, 1, 1)
 async def main() -> None:
     await logger.start()
     try:
-        _print_startup_info()
+        await _print_startup_info()
         await _update_yt_dlp()
         await _ensure_db()
 
         while True:
             channels = await Channel.get_all_channels(DATA_PATH)
             await ArchiveJob(channels, DATA_PATH).archive_all()
-            logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
+            await logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
             await asyncio.sleep(SLEEP_INTERVAL)
     finally:
         await logger.stop()
@@ -37,7 +37,7 @@ async def main() -> None:
 # Startup helpers
 # -----------------------------------------------------------------------------
 
-def _print_startup_info() -> None:
+async def _print_startup_info() -> None:
     version_str = ".".join(str(v) for v in VERSION)
     settings = {
         "version":             f"v{version_str}",
@@ -57,7 +57,7 @@ def _print_startup_info() -> None:
         "CONSOLE_COLORS":      CONSOLE_COLORS,
     }
     for key, value in settings.items():
-        logger.info(f"system - {key}={value}")
+        await logger.info(f"system - {key}={value}")
 
 
 async def _update_yt_dlp() -> None:
@@ -69,7 +69,7 @@ async def _update_yt_dlp() -> None:
         stderr=subprocess.DEVNULL,
     )
     new = _yt_dlp_version()
-    logger.info(f"system - yt-dlp {old} → {new}")
+    await logger.info(f"system - yt-dlp {old} → {new}")
 
 
 def _yt_dlp_version() -> str:
@@ -85,9 +85,9 @@ async def _ensure_db() -> None:
     table_exists = bool(rows[0][0])
 
     if table_exists:
-        logger.info("system - database table exists")
+        await logger.info("system - database table exists")
     else:
-        logger.info("system - creating table")
+        await logger.info("system - creating table")
         await db.create_table()
 
 

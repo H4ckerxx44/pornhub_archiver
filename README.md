@@ -11,6 +11,9 @@ A small Dockerized archiver for Pornhub model and pornstar channels. It reads ch
 - [Adding Channels](#adding-channels)
 - [Storage Layout](#storage-layout)
 - [Docker](#docker)
+- [Docker Compose](#docker-compose)
+- [Running Locally](#running-locally)
+- [Recovery and Offline Videos](#recovery-and-offline-videos)
 - [How It Works](#how-it-works)
 - [Contributing](#contributing)
 
@@ -28,6 +31,7 @@ Mounting `/data` to a large HDD is highly recommended.
 |-----------------------|--------------------|----------------------------------------------------------------|
 | `STEP_SLEEP_INTERVAL` | `15`               | Seconds to wait between each channel's metadata/download step. |
 | `SLEEP_INTERVAL`      | `3600`             | Seconds to sleep after each archival run.                      |
+| `DATA_PATH`           | `/data`            | Directory where archived channel folders are written.          |
 | `DB_HOST`             | `localhost`        | Host running the MariaDB server.                               |
 | `DB_PORT`             | `3306`             | MariaDB server port.                                           |
 | `DB_USER`             | `root`             | Database user used by the archiver.                            |
@@ -57,6 +61,22 @@ CREATE DATABASE ph_archiver;
 ```
 
 The container creates the `channels` table automatically on startup if it does not exist.
+
+The expected schema is:
+
+```sql
+CREATE TABLE channels (
+    id int auto_increment primary key,
+    link text not null,
+    comment text null,
+    total_videos int default 0 not null,
+    archived_videos int default 0 not null,
+    added_on datetime default current_timestamp() not null,
+    last_queried_at datetime default current_timestamp() not null,
+    is_active tinyint(1) default 1 not null,
+    constraint channels_link_uindex unique (link) using hash
+);
+```
 
 ## Adding Channels
 
@@ -105,6 +125,13 @@ The archiver may also write related files such as thumbnails and metadata, depen
 
 ## Docker
 
+Published image tags follow the helper scripts in this repository:
+
+```text
+h4ckerxx44/pornhub_archiver:latest
+h4ckerxx44/pornhub_archiver:v4
+```
+
 Build the image:
 
 ```bash
@@ -122,6 +149,7 @@ docker run -d \
   -e DB_PORT=3306 \
   -e DB_USER=root \
   -e DB_PASSWORD=root \
+  -e DATA_PATH=/data \
   -e SLEEP_INTERVAL=3600 \
   -e STEP_SLEEP_INTERVAL=15 \
   -e LOKI_URL=http://loki:3100 \
@@ -130,6 +158,70 @@ docker run -d \
 ```
 
 If MariaDB is running in another container, put both containers on the same Docker network and use the MariaDB container name as `DB_HOST`.
+
+## Docker Compose
+
+Example with the archiver and MariaDB on the same network:
+
+```yaml
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: ph_archiver
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - mariadb-data:/var/lib/mysql
+
+  pornhub-archiver:
+    image: h4ckerxx44/pornhub_archiver:latest
+    depends_on:
+      - mariadb
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: root
+      DATA_PATH: /data
+      SLEEP_INTERVAL: 3600
+      STEP_SLEEP_INTERVAL: 15
+      LOG_PATH: /logs
+    volumes:
+      - /path/to/archive:/data
+      - /path/to/logs:/logs
+
+volumes:
+  mariadb-data:
+```
+
+## Running Locally
+
+Install the package dependencies in a Python environment, make sure `ffmpeg` is available on `PATH`, and run:
+
+```bash
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_USER=root
+export DB_PASSWORD=root
+export DATA_PATH=/path/to/archive
+export LOG_PATH=/path/to/logs
+
+python -m pornhub_archiver.run
+```
+
+The database must already exist before startup:
+
+```sql
+CREATE DATABASE ph_archiver;
+```
+
+## Recovery and Offline Videos
+
+At the start of each archival run, the tool removes incomplete yt-dlp fragments such as `.part` files and `.part-Frag*` files from each channel directory. Completed files are left in place.
+
+The tool scans filenames on disk and treats the leading `[video_id]` prefix as the archived video ID. If a video is present on disk but no longer appears in the channel listing, it is reported as `now offline`; the file is not deleted.
+
+When a video is missing on disk but still appears in the channel listing, the tool downloads it with yt-dlp into the channel directory and increments `archived_videos` after a successful download.
 
 ## How It Works
 

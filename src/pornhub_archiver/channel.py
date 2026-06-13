@@ -4,7 +4,7 @@ from pathlib import Path
 from yt_dlp import YoutubeDL
 
 from . import db
-from .SilentLogger import SilentLogger, logger
+from .SilentLogger import logger
 from .functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si, spacer
 
 _PARTIAL_SUFFIXES = (".part",)
@@ -40,7 +40,8 @@ class Channel:
         self.error_count: int = 0
         self.size_before: int = 0  # total channel bytes on disk before this run
         self.size_downloaded: int = 0  # bytes added during this run
-        self.yt_dlp_options = self._build_yt_dlp_options()
+        self.metadata_yt_dlp_options = self._build_metadata_yt_dlp_options()
+        self.download_yt_dlp_options = self._build_download_yt_dlp_options()
 
     # -------------------------------------------------------------------------
     # Public API
@@ -80,7 +81,7 @@ class Channel:
         total = len(self.missing_videos)
         channel_pct = (current_channel_number / total_channels) * 100
 
-        logger.info(
+        await logger.info(
             f"\tchannel - {self.name} ({current_channel_number:,}/{total_channels:,} | {channel_pct:,.2f}%) - "
             f"{total:,} video(s) to archive (existing: {format_si(self.size_before)}) | missing videos: [{", ".join(self.missing_videos)}]"
         )
@@ -90,12 +91,12 @@ class Channel:
                 video_id, i, total, channel_start
             )
             if not success:
-                logger.error(f"\t\tvideo {video_url_from_id(video_id)} errored")
+                await logger.error(f"\t\tvideo {video_url_from_id(video_id)} errored")
                 errors += 1
 
         total_size_after = self.size_before + self.size_downloaded
         elapsed = nice_timedelta(datetime.now(UTC), channel_start)
-        logger.info(
+        await logger.info(
             f"\t\t{spacer()} RESULT {spacer()}\n"
             f"\t\tdownloaded {format_si(self.size_downloaded)} this run | "
             f"total on disk: {format_si(total_size_after)} "
@@ -112,9 +113,9 @@ class Channel:
     async def get_all_channels(cls, data_path: Path) -> list["Channel"]:
         rows = await db.execute_query(
             "select id, link, added_on, last_queried_at, total_videos, archived_videos "
-            "from channels where is_active=1 order by link"
+            "from channels2 where is_active=1 order by link"
         )
-        return [cls._from_row(row, data_path) for row in rows]
+        return [await cls._from_row(row, data_path) for row in rows]
 
     # -------------------------------------------------------------------------
     # DB helpers
@@ -122,20 +123,20 @@ class Channel:
 
     async def _update_last_queried(self) -> None:
         await db.execute_query(
-            "update channels set last_queried_at=%s where link=%s",
+            "update channels2 set last_queried_at=%s where link=%s",
             (datetime.now(UTC), self.link),
         )
 
     async def _set_total_videos(self, count: int) -> None:
         self.total_videos = count
         await db.execute_query(
-            "update channels set total_videos=%s where link=%s",
+            "update channels2 set total_videos=%s where link=%s",
             (count, self.link),
         )
 
     async def _set_archived_video_count(self) -> None:
         await db.execute_query(
-            "update channels set archived_videos=%s where link=%s",
+            "update channels2 set archived_videos=%s where link=%s",
             (len(self.videos_on_disk), self.link),
         )
 
@@ -143,7 +144,7 @@ class Channel:
         self.archived_videos += 1
         self.archived_this_time += 1
         await db.execute_query(
-            "update channels set archived_videos=archived_videos+1 where link=%s",
+            "update channels2 set archived_videos=archived_videos+1 where link=%s",
             (self.link,),
         )
 
@@ -162,7 +163,7 @@ class Channel:
         download_start = datetime.now(UTC)
 
         try:
-            with YoutubeDL(self.yt_dlp_options) as yt:
+            with YoutubeDL(self.download_yt_dlp_options) as yt:
                 yt.download(url)
 
             video_size = self._video_size_on_disk(video_id)
@@ -172,7 +173,7 @@ class Channel:
             channel_elapsed = nice_timedelta(datetime.now(UTC), channel_start)
             video_pct = ((index + 1) / total) * 100
 
-            logger.info(
+            await logger.info(
                 f"\t\tvideo {video_id} ({index + 1:,}/{total:,} | {video_pct:,.2f}%)"
                 f", took {video_elapsed} (channel: {channel_elapsed} so far)"
                 f", size: {format_si(video_size)} (+{format_si(self.size_downloaded)} so far)"
@@ -204,14 +205,14 @@ class Channel:
         return self.missing_videos
 
     async def _fetch_channel_video_ids(self, current_channel_number: int, total_channels: int) -> tuple[list[str], bool]:
-        with YoutubeDL(self.yt_dlp_options) as yt:
+        with YoutubeDL(self.metadata_yt_dlp_options) as yt:
             while self.error_count < MAX_ERRORS:
                 try:
                     info = yt.extract_info(f"{self.link}/videos", download=False)
                     return [video_id_from_link(e["url"]) for e in info["entries"]], False
                 except Exception:
                         self.error_count += 1
-                        logger.warning(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
+                        await logger.warning(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
             return [], True
 
     def _scan_disk(self) -> None:
@@ -258,21 +259,29 @@ class Channel:
     # Private helpers
     # -------------------------------------------------------------------------
 
-    def _build_yt_dlp_options(self) -> dict:
+    @staticmethod
+    def _build_common_yt_dlp_options() -> dict:
         return {
             "quiet": True,
             "noprogress": True,
             "no_warnings": True,
-            "extract_flat": True,
             "logtostderr": False,
-            "logger": SilentLogger(send_to_file=False, send_to_loki=False),
+            "nocheckcertificate": True,
+            "retries": 5,
+            "socket_timeout": 30,
+        }
+
+    def _build_metadata_yt_dlp_options(self) -> dict:
+        return self._build_common_yt_dlp_options() | {
+            "extract_flat": True,
+        }
+
+    def _build_download_yt_dlp_options(self) -> dict:
+        return self._build_common_yt_dlp_options() | {
             "outtmpl": f"{self.channel_path}/[%(id)s] %(title)s.%(ext)s",
             "restrictfilenames": True,
             "concurrent_fragment_downloads": 4,
-            "nocheckcertificate": True,
-            "retries": 5,
             "fragment_retries": 10,
-            "socket_timeout": 30,
             "writethumbnail": True,
             "postprocessors": [
                 {"key": "FFmpegMetadata", "add_chapters": True, "add_metadata": True, "add_infojson": "if_exists"},
@@ -285,15 +294,15 @@ class Channel:
         return file.suffix == ".part" or ".part-Frag" in file.name
 
     @classmethod
-    def _from_row(cls, row: tuple, data_path: Path) -> "Channel":
+    async def _from_row(cls, row: tuple, data_path: Path) -> "Channel":
         db_id, link, added_on, last_queried_at, total_videos, archived_videos = row
-        link = cls._normalize_link(link)
+        link = await cls._normalize_link(link)
         return cls(db_id, link, total_videos, archived_videos, added_on, last_queried_at, data_path)
 
     @staticmethod
-    def _normalize_link(link: str) -> str:
+    async def _normalize_link(link: str) -> str:
         for suffix in _LINK_SUFFIXES:
             if link.endswith(suffix):
-                logger.warning(f"WRONG PATH FORMAT - {link} ends with '{suffix}'")
+                await logger.warning(f"WRONG PATH FORMAT - {link} ends with '{suffix}'")
                 return link[: -len(suffix)]
         return link
