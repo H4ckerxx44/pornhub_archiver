@@ -102,6 +102,7 @@ class Channel:
             f"total on disk: {format_si(total_size_after)} "
             f"(was {format_si(self.size_before)} + {format_si(self.size_downloaded)} => {format_si(total_size_after)}\n"
             f"\t\ttook {elapsed} | archived: {self.archived_this_time:,} | errors: {errors:,}\n"
+            f"average download speed: {self.size_downloaded / elapsed.total_seconds()} MiB/s\n"
         )
 
     # -------------------------------------------------------------------------
