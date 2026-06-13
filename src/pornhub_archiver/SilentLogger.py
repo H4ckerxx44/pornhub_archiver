@@ -181,9 +181,9 @@ class SilentLogger:
         if self.send_to_console:
             print(self.format_console_message(level, msg), flush=True)
         if self.send_to_file:
-            _file_log_sink.write(level, msg)
+            _file_log_sink.write(level, self._format_for_non_console_log(msg))
         if self.send_to_loki:
-            self._send_to_loki(level, msg)
+            self._send_to_loki(level, self._format_for_non_console_log(msg))
 
     @staticmethod
     def format_console_message(level: str, msg: str) -> str:
@@ -212,6 +212,10 @@ class SilentLogger:
             return f"{_DIM}{color}{msg}{_RESET}"
 
         return f"{color}{msg}{_RESET}"
+
+    @staticmethod
+    def _format_for_non_console_log(msg: str) -> str:
+        return msg.lstrip(" \t")
 
     def _send_to_loki(self, level: str, msg: str) -> None:
         if not _loki.enabled():
