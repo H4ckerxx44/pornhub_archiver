@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .channel import Channel
 from .functions import nice_timedelta, format_si
-from .SilentLogger import logger
+from .logger import logger
 
 STEP_SLEEP_INTERVAL = int(os.getenv("STEP_SLEEP_INTERVAL", 15))
 

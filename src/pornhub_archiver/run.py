@@ -8,7 +8,7 @@ from . import db
 from .archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
 from .channel import Channel
 from .db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
-from .SilentLogger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
+from .logger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
 
 DATA_PATH = pathlib.Path(os.getenv("DATA_PATH", "/data"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))

@@ -4,7 +4,7 @@ from pathlib import Path
 from yt_dlp import YoutubeDL
 
 from . import db
-from .SilentLogger import logger
+from .logger import logger
 from .functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si, spacer
 
 _PARTIAL_SUFFIXES = (".part",)

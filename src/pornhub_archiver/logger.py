@@ -1,12 +1,13 @@
 import asyncio
 import os
-import pathlib
 import socket
 import time
-from collections.abc import Mapping
+from pathlib import Path
 
 import aiohttp
 import arrow
+
+_TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
 
 
 def _float_env(name: str, default: float) -> float:
@@ -20,7 +21,7 @@ def _bool_env(name: str, default: bool) -> bool:
     value = os.getenv(name)
     if value is None:
         return default
-    return value.strip().lower() in ("1", "true", "yes", "on")
+    return value.strip().lower() in _TRUTHY_ENV_VALUES
 
 
 LOKI_URL: str = os.getenv("LOKI_URL", "").strip()
@@ -35,7 +36,7 @@ CONSOLE_COLORS: bool = _bool_env("CONSOLE_COLORS", True)
 _RESET: str = "\033[0m"
 _BOLD: str = "\033[1m"
 _DIM: str = "\033[2m"
-_LEVEL_COLORS: Mapping[str, str] = {
+_LEVEL_COLORS: dict[str, str] = {
     "debug": "\033[90m",
     "info": "\033[36m",
     "warning": "\033[33m",
@@ -101,14 +102,14 @@ class LokiClient:
     @staticmethod
     def print_not_started_warning() -> None:
         print(
-            SilentLogger.format_console_message("warning", "system - Loki logger was not started; dropping Loki messages"),
+            AsyncLogger.format_console_message("warning", "system - Loki logger was not started; dropping Loki messages"),
             flush=True,
         )
 
     @staticmethod
     def print_warning(exc: Exception | str) -> None:
         msg = f"system - failed to send logs to Loki: {exc}"
-        print(SilentLogger.format_console_message("warning", msg), flush=True)
+        print(AsyncLogger.format_console_message("warning", msg), flush=True)
 
     @staticmethod
     def _push_url(url: str) -> str:
@@ -139,7 +140,7 @@ class LokiClient:
         return labels
 
 
-class SilentLogger:
+class AsyncLogger:
     def __init__(
             self,
             send_to_console: bool = False,
@@ -174,23 +175,25 @@ class SilentLogger:
 
     async def _log(self, level: str, msg: str) -> None:
         msg = str(msg)
+        non_console_msg = self._format_for_non_console_log(msg)
+
         if self.send_to_console:
             print(self.format_console_message(level, msg), flush=True)
         if self.send_to_file:
-            _file_log_sink.write(level, self._format_for_non_console_log(msg))
+            _file_log_sink.write(level, non_console_msg)
         if self.send_to_loki:
-            await self._send_to_loki(level, self._format_for_non_console_log(msg))
+            await _loki.send(level, non_console_msg)
 
     @staticmethod
     def format_console_message(level: str, msg: str) -> str:
-        return SilentLogger.format_message(level, msg, colors=CONSOLE_COLORS)
+        return AsyncLogger.format_message(level, msg, colors=CONSOLE_COLORS)
 
     @staticmethod
     def format_message(level: str, msg: str, colors: bool) -> str:
         timestamp = arrow.utcnow().format("YYYY-MM-DD HH:mm:ss ZZ")
         level_name = level.upper().ljust(7)
         formatted = f"[{timestamp}] [{level_name}] {msg}"
-        return SilentLogger.colorize(level, formatted) if colors else formatted
+        return AsyncLogger.colorize(level, formatted) if colors else formatted
 
     @staticmethod
     def colorize(level: str, msg: str) -> str:
@@ -213,15 +216,11 @@ class SilentLogger:
     def _format_for_non_console_log(msg: str) -> str:
         return msg.lstrip(" \t")
 
-    @staticmethod
-    async def _send_to_loki(level: str, msg: str) -> None:
-        await _loki.send(level, msg)
-
 
 class FileLogSink:
     def __init__(self) -> None:
-        self.path: pathlib.Path | None = pathlib.Path(LOG_PATH) if LOG_PATH else None
-        self.file_path: pathlib.Path | None = None
+        self.path: Path | None = Path(LOG_PATH) if LOG_PATH else None
+        self.file_path: Path | None = None
         self._warning_printed: bool = False
 
     def enabled(self) -> bool:
@@ -237,7 +236,7 @@ class FileLogSink:
 
         self._create_file()
 
-    def _new_file_path(self) -> pathlib.Path | None:
+    def _new_file_path(self) -> Path | None:
         if self.path is None:
             return None
 
@@ -268,7 +267,7 @@ class FileLogSink:
 
         try:
             with self.file_path.open("a", encoding="utf-8") as file:
-                print(SilentLogger.format_message(level, msg, colors=False), file=file, flush=True)
+                print(AsyncLogger.format_message(level, msg, colors=False), file=file, flush=True)
         except OSError as exc:
             self.print_warning_once(exc)
 
@@ -277,10 +276,10 @@ class FileLogSink:
             return
         self._warning_printed = True
         msg = f"system - failed to write local log file: {exc}"
-        print(SilentLogger.format_console_message("warning", msg), flush=True)
+        print(AsyncLogger.format_console_message("warning", msg), flush=True)
 
 
-class AppLogger(SilentLogger):
+class AppLogger(AsyncLogger):
     def __init__(self, send_to_console: bool) -> None:
         super().__init__(send_to_console=send_to_console, send_to_file=True, send_to_loki=True)
 
