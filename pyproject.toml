@@ -11,3 +11,6 @@ dependencies = [
     "rich>=15.0.0",
     "yt-dlp>=2026.2.21",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]

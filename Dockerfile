@@ -17,7 +17,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
-    OPENSSL_CONF=/dev/null
+    OPENSSL_CONF=/dev/null \
+    PYTHONPATH=/app/src
 
 # Config defaults (override at runtime)
 ENV SLEEP_INTERVAL=3600 \
@@ -55,8 +56,8 @@ RUN pip install \
         arrow \
         "yt-dlp[default,curl-cffi]"
 
-COPY . /app/
+COPY src/ /app/src/
 
 VOLUME ["/data", "/logs"]
 
-CMD ["python", "src/run.py"]
+CMD ["python", "-m", "pornhub_archiver.run"]
