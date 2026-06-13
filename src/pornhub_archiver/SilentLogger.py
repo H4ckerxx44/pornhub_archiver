@@ -49,8 +49,6 @@ class LokiClient:
         self.labels: dict[str, str] = self._labels()
         self.timeout: float = LOKI_TIMEOUT
         self.session: aiohttp.ClientSession | None = None
-        self._warning_printed: bool = False
-        self._not_started_warning_printed: bool = False
 
     def enabled(self) -> bool:
         return bool(self.url)
@@ -79,7 +77,7 @@ class LokiClient:
             return
 
         if self.session is None:
-            self.print_not_started_warning_once()
+            self.print_not_started_warning()
             return
 
         labels: dict[str, str] = self.labels | {"level": level.lower()}
@@ -96,23 +94,19 @@ class LokiClient:
             async with self.session.post(self.url, json=payload) as response:
                 if response.status >= 400:
                     text = await response.text()
-                    self.print_warning_once(f"HTTP {response.status}: {text[:200]}")
+                    self.print_warning(f"HTTP {response.status}: {text[:200]}")
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as exc:
-            self.print_warning_once(exc)
+            self.print_warning(exc)
 
-    def print_not_started_warning_once(self) -> None:
-        if self._not_started_warning_printed:
-            return
-        self._not_started_warning_printed = True
+    @staticmethod
+    def print_not_started_warning() -> None:
         print(
             SilentLogger.format_console_message("warning", "system - Loki logger was not started; dropping Loki messages"),
             flush=True,
         )
 
-    def print_warning_once(self, exc: Exception | str) -> None:
-        if self._warning_printed:
-            return
-        self._warning_printed = True
+    @staticmethod
+    def print_warning(exc: Exception | str) -> None:
         msg = f"system - failed to send logs to Loki: {exc}"
         print(SilentLogger.format_console_message("warning", msg), flush=True)
 
@@ -217,7 +211,7 @@ class SilentLogger:
         try:
             loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
         except RuntimeError:
-            _loki.print_not_started_warning_once()
+            _loki.print_not_started_warning()
             return
 
         task: asyncio.Task[None] = loop.create_task(_loki.send(level, msg))
@@ -230,7 +224,7 @@ class SilentLogger:
         try:
             task.result()
         except Exception as exc:
-            _loki.print_warning_once(exc)
+            _loki.print_warning(exc)
 
 
 class FileLogSink:
