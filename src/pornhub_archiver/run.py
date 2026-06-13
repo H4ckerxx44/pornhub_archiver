@@ -69,7 +69,7 @@ async def _update_yt_dlp() -> None:
         stderr=subprocess.DEVNULL,
     )
     new = _yt_dlp_version()
-    await logger.info(f"system - yt-dlp {old} → {new}")
+    await logger.info(f"system - yt-dlp {old} => {new}")
 
 
 def _yt_dlp_version() -> str:
