@@ -107,6 +107,7 @@ class ArchiveJob:
 
         channels_to_download = []
         total_missing = 0
+        total_offline = 0
 
         for channel, missing_videos in results:
             missing_count = len(missing_videos)
@@ -123,10 +124,11 @@ class ArchiveJob:
                 channels_to_download.append(channel)
 
             total_missing += missing_count
-            await logger.info(s)
+            total_offline += offline_count
+            await logger.debug(s)
 
         await logger.info(
-            f"system - {total_missing:,} videos missing across {len(channels_to_download):,}/{total_channels:,} channels")
+            f"system - {total_missing:,} videos missing across {len(channels_to_download):,}/{total_channels:,} channels, {total_offline:,} are offline")
         self.total_missing = total_missing
         self.channels_with_missing = len(channels_to_download)
         return channels_to_download
