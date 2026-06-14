@@ -67,7 +67,10 @@ def import_run_module(run_once: str | None) -> tuple[types.ModuleType, FakeLogge
         ArchiveJob=FakeArchiveJob,
         STEP_SLEEP_INTERVAL=0,
     )
-    sys.modules["pornhub_archiver.channel"] = types.SimpleNamespace(Channel=FakeChannel)
+    sys.modules["pornhub_archiver.channel"] = types.SimpleNamespace(
+        Channel=FakeChannel,
+        CONCURRENT_FRAGMENT_DOWNLOADS=4,
+    )
     sys.modules["pornhub_archiver.logger"] = types.SimpleNamespace(
         CONSOLE_COLORS=True,
         LOG_PATH="/logs",
@@ -108,7 +111,7 @@ class RunTests(unittest.TestCase):
 
         run._print_startup_info = no_op
         run._update_yt_dlp = no_op
-        run._ensure_db = no_op
+        run._ensure_db_table_exist = no_op
 
         asyncio.run(run.main())
 

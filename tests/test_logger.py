@@ -114,6 +114,7 @@ class LoggerHelperTests(unittest.TestCase):
             sink.write("info", "hello")
 
             self.assertIsNotNone(sink.file_path)
+            self.assertEqual(sink.file_path.suffix, ".log")
             self.assertIn("hello", sink.file_path.read_text(encoding="utf-8"))
 
 
