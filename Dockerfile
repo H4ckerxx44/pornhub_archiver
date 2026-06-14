@@ -55,6 +55,7 @@ RUN pip install \
         aiohttp \
         aiomysql \
         arrow \
+        humanize \
         "yt-dlp[default,curl-cffi]"
 
 COPY src/ /app/src/
