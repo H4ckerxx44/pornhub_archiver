@@ -62,7 +62,7 @@ class ArchiveJob:
             channel.size_before = channel_size
             total_files += file_count
             total_size += channel_size
-            await logger.info(
+            await logger.debug(
                 f"\t[{j+1}/{len(self.channels):,}] {channel.get_name()} - "
                 f"{file_count:,} files "
                 f"(total: {total_files:,} / {format_si(total_size)})"
@@ -82,7 +82,7 @@ class ArchiveJob:
             channel.size_before = channel.get_channel_size()
             total_deleted += deleted
             elapsed = datetime.now(UTC) - step_start
-            await logger.info(
+            await logger.debug(
                 f"\t[{j+1}/{len(self.channels):,}] {channel.get_name()} - "
                 f"deleted {deleted:,} files, took: {elapsed}"
             )
