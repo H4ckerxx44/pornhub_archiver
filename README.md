@@ -236,37 +236,48 @@ When a video is missing on disk but still appears in the channel listing, the to
 
 ```mermaid
 flowchart TD
-    A[Container starts] --> B[Print startup config]
-    B --> C[Update yt-dlp]
-    C --> D{channels table exists?}
-    D -- no --> E[Create channels table]
-    D -- yes --> F[Start archival loop]
-    E --> F
+    A[Process starts] --> B[Start local and Loki loggers]
+    B --> C[Print startup config]
+    C --> D[Update yt-dlp]
+    D --> E{channels table exists?}
+    E -- no --> F[Create channels table]
+    E -- yes --> G[Start archival pass]
+    F --> G
 
-    F --> G[Load active channels from MariaDB]
-    G --> H[Create/check /data/name folders]
-    H --> I[Remove partial download fragments]
-    I --> J[Fetch metadata for each channel]
+    G --> H[Load active channels from MariaDB]
+    H --> I[Create/check each /data/name folder]
+    I --> J[Remove partial download fragments]
+    J --> K[Fetch metadata for each channel]
 
-    J --> K[Scan files already on disk]
-    K --> L[Update archived_videos count in DB]
-    L --> M[Fetch current video list from channel/videos]
-    M --> N[Update last_queried_at and total_videos in DB]
-    N --> O[Compare website video IDs with disk video IDs]
+    K --> L["Scan disk for files named with [video_id] prefix"]
+    L --> M[Update archived_videos count in DB]
+    M --> N[Fetch current channel/videos list]
+    N --> O{Metadata fetch succeeded?}
+    O -- yes --> P[Update last_queried_at and total_videos in DB]
+    O -- no --> Q[Keep existing DB metadata for that channel]
+    P --> R[Compare website video IDs with disk video IDs]
+    Q --> R
 
-    O --> P{Missing videos?}
-    P -- no --> Q[Skip channel]
-    P -- yes --> R[Download missing videos with yt-dlp]
-    R --> S[Write files to /data/name/video]
-    S --> T[Increment archived_videos in DB]
+    R --> S[Record missing and now-offline video IDs]
+    S --> T{Any missing videos?}
+    T -- no --> U[Skip channel downloads]
+    T -- yes --> V[Download missing videos with yt-dlp]
+    V --> W[Write video files, thumbnails, and metadata under /data/name]
+    W --> X[Increment archived_videos after each successful video]
+    U --> Y{More channels to download?}
+    X --> Y
+    Y -- yes --> Z[Wait STEP_SLEEP_INTERVAL seconds]
+    Z --> V
+    Y -- no --> AA[Log run summary]
 
-    Q --> U{More channels?}
-    T --> U
-    U -- yes --> V[Wait STEP_SLEEP_INTERVAL seconds]
-    V --> J
-    U -- no --> W[Print run summary]
-    W --> X[Sleep SLEEP_INTERVAL seconds]
-    X --> F
+    AA --> AB{LOG_PATH set?}
+    AB -- yes --> AC[Write timestamped JSON run report under /logs]
+    AB -- no --> AD[Skip JSON report]
+    AC --> AE{RUN_ONCE enabled?}
+    AD --> AE
+    AE -- yes --> AF[Stop loggers and exit]
+    AE -- no --> AG[Log next run time and sleep SLEEP_INTERVAL seconds]
+    AG --> G
 ```
 
 ## Contributing
