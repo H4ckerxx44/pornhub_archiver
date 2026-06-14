@@ -15,6 +15,9 @@ class _Logger:
     async def info(self, msg: str) -> None:
         self.messages.append(("info", msg))
 
+    async def debug(self, msg: str) -> None:
+        self.messages.append(("debug", msg))
+
     async def warning(self, msg: str) -> None:
         self.messages.append(("warning", msg))
 
