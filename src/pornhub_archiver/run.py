@@ -15,7 +15,7 @@ SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
 RUN_ONCE = os.getenv("RUN_ONCE", "").strip().lower() in {"1", "true", "yes", "on"}
 OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
-VERSION = (4, 5, 6)
+VERSION = (4, 5, 7)
 
 
 async def main() -> None:
