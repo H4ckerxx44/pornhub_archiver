@@ -1,5 +1,8 @@
 import asyncio
+import json
+import os
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -43,6 +46,7 @@ class FakeChannel:
         self.size = size
         self.deleted = deleted
         self.missing = missing or []
+        self.missing_videos = self.missing
         self.archived_this_time = archived_this_time
         self.size_downloaded = size_downloaded
         self.videos_on_disk: dict[str, bool] = {}
@@ -67,9 +71,21 @@ class FakeChannel:
     async def archive(self, current_channel_number: int, total_channels: int) -> None:
         self.archive_calls.append((current_channel_number, total_channels))
 
+    def run_report(self) -> dict:
+        return {
+            "name": self.name,
+            "archived_on_disk": len(self.videos_on_disk),
+            "missing": len(self.missing_videos),
+            "offline": len(self.offline_videos),
+            "downloaded_this_run": self.archived_this_time,
+            "bytes_added": self.size_downloaded,
+            "bytes_added_human": "fake",
+        }
+
 
 class ArchiveJobTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.old_env = os.environ.copy()
         self.logger = _Logger()
         self.original_logger = archive_job_module.logger
         self.original_sleep = archive_job_module.asyncio.sleep
@@ -83,6 +99,8 @@ class ArchiveJobTests(unittest.TestCase):
         archive_job_module.asyncio.sleep = no_sleep
 
     def tearDown(self) -> None:
+        os.environ.clear()
+        os.environ.update(self.old_env)
         archive_job_module.logger = self.original_logger
         archive_job_module.asyncio.sleep = self.original_sleep
         archive_job_module.STEP_SLEEP_INTERVAL = self.original_step_sleep_interval
@@ -119,6 +137,47 @@ class ArchiveJobTests(unittest.TestCase):
         self.assertEqual(job.archived_data, 3072)
         self.assertEqual(channels[0].archive_calls, [(1, 2)])
         self.assertEqual(channels[1].archive_calls, [(2, 2)])
+
+    def test_archive_all_writes_timestamped_run_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            os.environ["LOG_PATH"] = tmp
+            channel = FakeChannel("a", file_count=2, deleted=1, missing=["ph1"], archived_this_time=1, size_downloaded=1024)
+            channel.videos_on_disk = {"ph0": True}
+            channel.offline_videos = ["ph-old"]
+            job = ArchiveJob([channel], Path("/tmp/archive"))
+
+            asyncio.run(job.archive_all())
+
+            report_files = list(Path(tmp).glob("*.json"))
+            self.assertEqual(len(report_files), 1)
+            self.assertRegex(report_files[0].name, r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_\d{6}Z\.json$")
+
+            report_path = report_files[0]
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(report["channels_scanned"], 1)
+        self.assertEqual(report["channels_with_missing"], 1)
+        self.assertEqual(report["files_on_disk"], 2)
+        self.assertEqual(report["partial_files_deleted"], 1)
+        self.assertEqual(report["videos_missing"], 1)
+        self.assertEqual(report["videos_downloaded"], 1)
+        self.assertEqual(report["videos_failed"], 0)
+        self.assertEqual(report["bytes_added"], 1024)
+        self.assertEqual(report["channels"][0]["name"], "a")
+        self.assertEqual(report["channels"][0]["missing"], 1)
+        self.assertEqual(report["channels"][0]["offline"], 1)
+
+    def test_run_reports_do_not_overwrite_older_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            os.environ["LOG_PATH"] = tmp
+            job = ArchiveJob([FakeChannel("a")], Path("/tmp/archive"))
+
+            asyncio.run(job.archive_all())
+            asyncio.run(job.archive_all())
+
+            report_files = list(Path(tmp).glob("*.json"))
+
+        self.assertEqual(len(report_files), 2)
 
 
 if __name__ == "__main__":

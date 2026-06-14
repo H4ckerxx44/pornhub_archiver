@@ -104,6 +104,7 @@ VALUES ('https://www.pornhub.com/model/example-name');
 
 Downloaded content is written under `/data`.
 Local log files are written under `/logs` and named with the container startup time in `YYYY-MM-DD HH:mm:ss` format.
+Each archival run also writes a timestamped JSON report under `/logs`, named by the run finish time, with a machine-readable summary of scanned channels, missing/downloaded/failed videos, cleanup count, bytes added, elapsed time, and per-channel counts. Older run reports are kept.
 
 For a channel URL like:
 

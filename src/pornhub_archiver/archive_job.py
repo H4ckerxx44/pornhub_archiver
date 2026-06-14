@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from datetime import datetime, UTC
 from pathlib import Path
@@ -17,6 +18,10 @@ class ArchiveJob:
         self.channels = channels
         self.start = datetime.now(UTC)
         self.data_path = data_path
+        self.total_files: int = 0
+        self.total_deleted: int = 0
+        self.total_missing: int = 0
+        self.channels_with_missing: int = 0
 
     # -------------------------------------------------------------------------
     # Public API
@@ -26,18 +31,20 @@ class ArchiveJob:
         run_start = datetime.now(UTC)
         await logger.info(f"system - archiving {len(self.channels):,} channels")
 
-        total_files = await self._create_paths()
-        await logger.info(f"system - found {total_files:,} files in total")
+        self.total_files = await self._create_paths()
+        await logger.info(f"system - found {self.total_files:,} files in total")
 
-        total_deleted = await self._cleanup_paths()
-        await logger.info(f"system - deleted {total_deleted:,} files in cleanup")
+        self.total_deleted = await self._cleanup_paths()
+        await logger.info(f"system - deleted {self.total_deleted:,} files in cleanup")
 
         channels_to_download = await self._collect_channels_with_missing_videos()
 
         await self._download_all(channels_to_download)
 
-        await logger.info(f"system - total runtime: {nice_timedelta(datetime.now(UTC), run_start)}")
+        elapsed = nice_timedelta(datetime.now(UTC), run_start)
+        await logger.info(f"system - total runtime: {elapsed}")
         await logger.info(f"system - total archived this run: {self.total_archived:,}")
+        await self._write_run_report(run_start, datetime.now(UTC), elapsed)
 
     # -------------------------------------------------------------------------
     # Steps
@@ -116,6 +123,8 @@ class ArchiveJob:
 
         await logger.info(
             f"system - {total_missing:,} videos missing across {len(channels_to_download):,}/{total_channels:,} channels")
+        self.total_missing = total_missing
+        self.channels_with_missing = len(channels_to_download)
         return channels_to_download
 
     async def _download_all(self, channels: list[Channel]) -> None:
@@ -148,3 +157,40 @@ class ArchiveJob:
         await logger.info(msg)
         await asyncio.sleep(STEP_SLEEP_INTERVAL)
         return channel, videos_to_download
+
+    async def _write_run_report(self, started_at: datetime, finished_at: datetime, elapsed) -> None:
+        report_path = self._run_report_path(finished_at)
+        if report_path is None:
+            return
+
+        report = {
+            "started_at": started_at.isoformat(),
+            "finished_at": finished_at.isoformat(),
+            "elapsed_seconds": elapsed.total_seconds(),
+            "channels_scanned": len(self.channels),
+            "channels_with_missing": self.channels_with_missing,
+            "files_on_disk": self.total_files,
+            "partial_files_deleted": self.total_deleted,
+            "videos_missing": self.total_missing,
+            "videos_downloaded": self.total_archived,
+            "videos_failed": max(self.total_missing - self.total_archived, 0),
+            "bytes_added": self.archived_data,
+            "bytes_added_human": format_si(self.archived_data),
+            "channels": [channel.run_report() for channel in self.channels],
+        }
+
+        try:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            with report_path.open("w", encoding="utf-8") as file:
+                json.dump(report, file, indent=4, sort_keys=True)
+            await logger.info(f"system - wrote run report to {report_path}")
+        except OSError as exc:
+            await logger.warning(f"system - failed to write run report to {report_path}: {exc}")
+
+    @staticmethod
+    def _run_report_path(finished_at: datetime) -> Path | None:
+        log_path = os.getenv("LOG_PATH", "/logs").strip()
+        if not log_path:
+            return None
+        timestamp = finished_at.astimezone(UTC).strftime("%Y-%m-%d_%H-%M-%S_%fZ")
+        return Path(log_path) / f"{timestamp}.json"

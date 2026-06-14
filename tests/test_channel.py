@@ -119,6 +119,30 @@ class ChannelDiskTests(unittest.TestCase):
             self.assertFalse(fragment.exists())
 
 
+class ChannelReportTests(unittest.TestCase):
+    def test_run_report_returns_channel_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            channel = make_channel(Path(tmp))
+            channel.videos_on_disk = {"ph0": True, "ph1": True}
+            channel.missing_videos = ["ph2"]
+            channel.offline_videos = ["ph-old"]
+            channel.archived_this_time = 1
+            channel.size_downloaded = 1024
+
+            self.assertEqual(
+                channel.run_report(),
+                {
+                    "name": "example",
+                    "archived_on_disk": 2,
+                    "missing": 1,
+                    "offline": 1,
+                    "downloaded_this_run": 1,
+                    "bytes_added": 1024,
+                    "bytes_added_human": "1.00 KiB",
+                },
+            )
+
+
 class MetadataRetryTests(unittest.TestCase):
     def tearDown(self) -> None:
         channel_module.YoutubeDL = _YoutubeDL

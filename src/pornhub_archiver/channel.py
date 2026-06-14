@@ -59,6 +59,17 @@ class Channel:
     def get_channel_path(self) -> Path:
         return self.channel_path
 
+    def run_report(self) -> dict:
+        return {
+            "name": self.get_name(),
+            "archived_on_disk": len(self.videos_on_disk),
+            "missing": len(self.missing_videos),
+            "offline": len(self.offline_videos),
+            "downloaded_this_run": self.archived_this_time,
+            "bytes_added": self.size_downloaded,
+            "bytes_added_human": format_si(self.size_downloaded),
+        }
+
     def create_path(self) -> int:
         """Ensure channel directory exists. Returns number of existing files."""
         if not self.channel_path.exists():
