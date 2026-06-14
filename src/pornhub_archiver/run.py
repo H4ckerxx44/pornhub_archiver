@@ -12,6 +12,7 @@ from .logger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_
 
 DATA_PATH = pathlib.Path(os.getenv("DATA_PATH", "/data"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
+RUN_ONCE = os.getenv("RUN_ONCE", "").strip().lower() in {"1", "true", "yes", "on"}
 OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
 VERSION = (4, 3, 0)
@@ -25,8 +26,10 @@ async def main() -> None:
         await _ensure_db()
 
         while True:
-            channels = await Channel.get_all_channels(DATA_PATH)
-            await ArchiveJob(channels, DATA_PATH).archive_all()
+            await _run_archive_once()
+            if RUN_ONCE:
+                await logger.info("system - RUN_ONCE enabled; exiting")
+                break
             await logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
             await asyncio.sleep(SLEEP_INTERVAL)
     finally:
@@ -36,6 +39,11 @@ async def main() -> None:
 # -----------------------------------------------------------------------------
 # Startup helpers
 # -----------------------------------------------------------------------------
+
+async def _run_archive_once() -> None:
+    channels = await Channel.get_all_channels(DATA_PATH)
+    await ArchiveJob(channels, DATA_PATH).archive_all()
+
 
 async def _print_startup_info() -> None:
     version_str = ".".join(str(v) for v in VERSION)
@@ -48,6 +56,7 @@ async def _print_startup_info() -> None:
         "DB_USER":             DB_USER,
         "DB_PASSWORD":         DB_PASSWORD,
         "SLEEP_INTERVAL":      SLEEP_INTERVAL,
+        "RUN_ONCE":            RUN_ONCE,
         "STEP_SLEEP_INTERVAL": STEP_SLEEP_INTERVAL,
         "LOKI_URL":            LOKI_URL,
         "LOKI_APP_LABEL":      LOKI_APP_LABEL,

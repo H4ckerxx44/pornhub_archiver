@@ -31,6 +31,7 @@ Mounting `/data` to a large HDD is highly recommended.
 |---------------------------------|--------------------|----------------------------------------------------------------|
 | `STEP_SLEEP_INTERVAL`           | `15`               | Seconds to wait between each channel's metadata/download step. |
 | `SLEEP_INTERVAL`                | `3600`             | Seconds to sleep after each archival run.                      |
+| `RUN_ONCE`                      | `false`            | Run one archival pass, then exit instead of sleeping forever.  |
 | `CONCURRENT_FRAGMENT_DOWNLOADS` | `4`                | Number of video fragments yt-dlp may download concurrently.    |
 | `DATA_PATH`                     | `/data`            | Directory where archived channel folders are written.          |
 | `DB_HOST`                       | `localhost`        | Host running the MariaDB server.                               |
@@ -152,6 +153,7 @@ docker run -d \
   -e DB_PASSWORD=root \
   -e DATA_PATH=/data \
   -e SLEEP_INTERVAL=3600 \
+  -e RUN_ONCE=false \
   -e CONCURRENT_FRAGMENT_DOWNLOADS=4 \
   -e STEP_SLEEP_INTERVAL=15 \
   -e LOKI_URL=http://loki:3100 \
@@ -186,6 +188,7 @@ services:
       DB_PASSWORD: root
       DATA_PATH: /data
       SLEEP_INTERVAL: 3600
+      RUN_ONCE: false
       CONCURRENT_FRAGMENT_DOWNLOADS: 4
       STEP_SLEEP_INTERVAL: 15
       LOG_PATH: /logs
@@ -209,6 +212,7 @@ export DB_PASSWORD=root
 export DATA_PATH=/path/to/archive
 export LOG_PATH=/path/to/logs
 export CONCURRENT_FRAGMENT_DOWNLOADS=4
+export RUN_ONCE=true
 
 python -m pornhub_archiver.run
 ```
