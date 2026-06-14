@@ -23,7 +23,7 @@ async def main() -> None:
     try:
         await _print_startup_info()
         await _update_yt_dlp()
-        await _ensure_db()
+        await _ensure_db_table_exist()
 
         while True:
             await _run_archive_once()
@@ -86,7 +86,7 @@ def _yt_dlp_version() -> str:
     return result.stdout.strip()
 
 
-async def _ensure_db() -> None:
+async def _ensure_db_table_exist() -> None:
     rows = await db.execute_query(
         "SELECT count(*) FROM information_schema.tables "
         "WHERE table_schema = 'ph_archiver' AND table_name = 'channels'"
