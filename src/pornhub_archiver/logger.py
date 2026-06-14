@@ -242,7 +242,8 @@ class FileLogSink:
 
         try:
             self.path.mkdir(parents=True, exist_ok=True)
-            return self.path / arrow.utcnow().format("YYYY-MM-DD HH:mm:ss")
+            file_name = arrow.utcnow().format("YYYY-MM-DD HH:mm:ss")
+            return self.path / f'{file_name}.log'
         except OSError as exc:
             self.print_warning_once(exc)
             return None
