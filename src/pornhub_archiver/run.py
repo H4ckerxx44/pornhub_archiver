@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, UTC
 
 from . import db
 from .archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
-from .channel import Channel
+from .channel import Channel, CONCURRENT_FRAGMENT_DOWNLOADS
 from .db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
 from .logger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
 
@@ -64,6 +64,7 @@ async def _print_startup_info() -> None:
         "LOKI_TIMEOUT":        LOKI_TIMEOUT,
         "LOG_PATH":            LOG_PATH,
         "CONSOLE_COLORS":      CONSOLE_COLORS,
+        "CONCURRENT_FRAGMENT_DOWNLOADS": CONCURRENT_FRAGMENT_DOWNLOADS,
     }
     for key, value in settings.items():
         await logger.info(f"system - {key}={value}")
