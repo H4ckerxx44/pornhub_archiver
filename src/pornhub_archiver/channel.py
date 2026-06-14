@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, UTC
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from .logger import logger
 from .functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si, spacer
 
 _LINK_SUFFIXES = ("/videos/", "/videos", "/")
+_VIDEO_FILENAME_RE = re.compile(r"^\[(?P<video_id>[^\]]+)]")
 
 MAX_ERRORS = 5
 CONCURRENT_FRAGMENT_DOWNLOADS = int(os.getenv("CONCURRENT_FRAGMENT_DOWNLOADS", 4))
@@ -221,9 +223,14 @@ class Channel:
         """Populate `videos_on_disk` from files currently on disk."""
         self.videos_on_disk = {}
         for file in self.channel_path.iterdir():
-            if file.is_file():
-                video_id = file.name.split(" ")[0].strip("[]")
-                self.videos_on_disk[video_id] = True
+            if not file.is_file():
+                continue
+
+            match = _VIDEO_FILENAME_RE.match(file.name)
+            if match is None:
+                continue
+
+            self.videos_on_disk[match.group("video_id")] = True
 
     # -------------------------------------------------------------------------
     # Size helpers

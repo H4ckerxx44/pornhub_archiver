@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Python tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Compile checked modules
+        run: python -m compileall -q src tests
+
+      - name: Run unit tests
+        run: PYTHONPATH=src python -m unittest discover -s tests
