@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, UTC
 from pathlib import Path
 
@@ -12,6 +13,11 @@ _PARTIAL_FRAGMENTS = (".part-Frag",)
 _LINK_SUFFIXES = ("/videos/", "/videos", "/")
 
 MAX_ERRORS = 5
+CONCURRENT_FRAGMENT_DOWNLOADS = int(os.getenv("CONCURRENT_FRAGMENT_DOWNLOADS", 4))
+
+if CONCURRENT_FRAGMENT_DOWNLOADS < 1:
+    raise ValueError("CONCURRENT_FRAGMENT_DOWNLOADS must be >= 1")
+
 
 class Channel:
     def __init__(
@@ -278,7 +284,7 @@ class Channel:
         return self._build_common_yt_dlp_options() | {
             "outtmpl": f"{self.channel_path}/[%(id)s] %(title)s.%(ext)s",
             "restrictfilenames": True,
-            "concurrent_fragment_downloads": 4,
+            "concurrent_fragment_downloads": CONCURRENT_FRAGMENT_DOWNLOADS,
             "fragment_retries": 10,
             "writethumbnail": True,
             "postprocessors": [

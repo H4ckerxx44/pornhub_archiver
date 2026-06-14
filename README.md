@@ -27,23 +27,24 @@ Mounting `/data` to a large HDD is highly recommended.
 
 ## Environment Variables
 
-| Variable              | Default            | Description                                                    |
-|-----------------------|--------------------|----------------------------------------------------------------|
-| `STEP_SLEEP_INTERVAL` | `15`               | Seconds to wait between each channel's metadata/download step. |
-| `SLEEP_INTERVAL`      | `3600`             | Seconds to sleep after each archival run.                      |
-| `DATA_PATH`           | `/data`            | Directory where archived channel folders are written.          |
-| `DB_HOST`             | `localhost`        | Host running the MariaDB server.                               |
-| `DB_PORT`             | `3306`             | MariaDB server port.                                           |
-| `DB_USER`             | `root`             | Database user used by the archiver.                            |
-| `DB_PASSWORD`         | `root`             | Database password.                                             |
-| `LOKI_URL`            | empty              | Loki base URL or push endpoint. Leave empty to disable Loki.   |
-| `LOKI_USERNAME`       | empty              | Optional Loki basic-auth username.                             |
-| `LOKI_PASSWORD`       | empty              | Optional Loki basic-auth password.                             |
-| `LOKI_LABELS`         | empty              | Optional extra Loki labels as `key=value,key2=value2`.         |
-| `LOKI_APP_LABEL`      | `pornhub-archiver` | Value for the Loki `app` label.                                |
-| `LOKI_TIMEOUT`        | `5`                | Seconds to wait when sending a log request to Loki.            |
-| `LOG_PATH`            | `/logs`            | Directory for local log files. Set empty to disable file logs. |
-| `CONSOLE_COLORS`      | `true`             | Set to `false` to disable ANSI colors in console output.       |
+| Variable                        | Default            | Description                                                    |
+|---------------------------------|--------------------|----------------------------------------------------------------|
+| `STEP_SLEEP_INTERVAL`           | `15`               | Seconds to wait between each channel's metadata/download step. |
+| `SLEEP_INTERVAL`                | `3600`             | Seconds to sleep after each archival run.                      |
+| `CONCURRENT_FRAGMENT_DOWNLOADS` | `4`                | Number of video fragments yt-dlp may download concurrently.    |
+| `DATA_PATH`                     | `/data`            | Directory where archived channel folders are written.          |
+| `DB_HOST`                       | `localhost`        | Host running the MariaDB server.                               |
+| `DB_PORT`                       | `3306`             | MariaDB server port.                                           |
+| `DB_USER`                       | `root`             | Database user used by the archiver.                            |
+| `DB_PASSWORD`                   | `root`             | Database password.                                             |
+| `LOKI_URL`                      | empty              | Loki base URL or push endpoint. Leave empty to disable Loki.   |
+| `LOKI_USERNAME`                 | empty              | Optional Loki basic-auth username.                             |
+| `LOKI_PASSWORD`                 | empty              | Optional Loki basic-auth password.                             |
+| `LOKI_LABELS`                   | empty              | Optional extra Loki labels as `key=value,key2=value2`.         |
+| `LOKI_APP_LABEL`                | `pornhub-archiver` | Value for the Loki `app` label.                                |
+| `LOKI_TIMEOUT`                  | `5`                | Seconds to wait when sending a log request to Loki.            |
+| `LOG_PATH`                      | `/logs`            | Directory for local log files. Set empty to disable file logs. |
+| `CONSOLE_COLORS`                | `true`             | Set to `false` to disable ANSI colors in console output.       |
 
 ## Notes
 
@@ -151,6 +152,7 @@ docker run -d \
   -e DB_PASSWORD=root \
   -e DATA_PATH=/data \
   -e SLEEP_INTERVAL=3600 \
+  -e CONCURRENT_FRAGMENT_DOWNLOADS=4 \
   -e STEP_SLEEP_INTERVAL=15 \
   -e LOKI_URL=http://loki:3100 \
   -e LOKI_LABELS=env=prod \
@@ -184,6 +186,7 @@ services:
       DB_PASSWORD: root
       DATA_PATH: /data
       SLEEP_INTERVAL: 3600
+      CONCURRENT_FRAGMENT_DOWNLOADS: 4
       STEP_SLEEP_INTERVAL: 15
       LOG_PATH: /logs
     volumes:
@@ -205,6 +208,7 @@ export DB_USER=root
 export DB_PASSWORD=root
 export DATA_PATH=/path/to/archive
 export LOG_PATH=/path/to/logs
+export CONCURRENT_FRAGMENT_DOWNLOADS=4
 
 python -m pornhub_archiver.run
 ```
