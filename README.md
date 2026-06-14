@@ -97,7 +97,7 @@ Example:
 
 ```sql
 INSERT INTO channels (link)
-VALUES ('https://www.pornhub.com/model/example-name');
+VALUES ('https://www.pornhub.com/[model|pornstar]/<name>');
 ```
 
 ## Storage Layout
@@ -109,7 +109,7 @@ Each archival run also writes a timestamped JSON report under `/logs`, named by 
 For a channel URL like:
 
 ```text
-https://www.pornhub.com/model/<name>
+https://www.pornhub.com/[model|pornstar]/<name>
 ```
 
 files are stored under:
