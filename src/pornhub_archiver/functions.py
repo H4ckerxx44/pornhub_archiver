@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlparse
 
+import humanize
+
 
 def video_url_from_id(video_id: str) -> str:
     return f"https://www.pornhub.org/view_video.php?viewkey={video_id}"
@@ -40,11 +42,7 @@ def nice_timedelta(x1: datetime, x2: datetime) -> timedelta:
 
 def format_si(size_bytes: int | float) -> str:
     """Format a byte count as a human-readable string (e.g. 1.23 GiB)."""
-    for unit in ("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB", "RiB"):
-        if abs(size_bytes) < 1024:
-            return f"{size_bytes:,.2f} {unit}"
-        size_bytes /= 1024
-    return f"{size_bytes:,.2f} QiB"
+    return humanize.naturalsize(size_bytes, binary=True, format="%.2f")
 
 
 def spacer(spacer_length: int = 25, spacer_char: str = "=") -> str:

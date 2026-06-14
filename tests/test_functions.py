@@ -19,8 +19,8 @@ class FunctionTests(unittest.TestCase):
 
     def test_format_si_formats_binary_units(self) -> None:
         cases = {
-            0: "0.00 B",
-            1023: "1,023.00 B",
+             0: "0 Bytes",
+            1023: "1023 Bytes",
             1024: "1.00 KiB",
             1024 * 1024 * 2.5: "2.50 MiB",
         }
