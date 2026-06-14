@@ -8,8 +8,6 @@ from . import db
 from .logger import logger
 from .functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si, spacer
 
-_PARTIAL_SUFFIXES = (".part",)
-_PARTIAL_FRAGMENTS = (".part-Frag",)
 _LINK_SUFFIXES = ("/videos/", "/videos", "/")
 
 MAX_ERRORS = 5
