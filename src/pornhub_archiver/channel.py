@@ -60,14 +60,25 @@ class Channel:
         return self.channel_path
 
     def run_report(self) -> dict:
+        bytes_after = self._channel_size_on_disk()
         return {
             "name": self.get_name(),
+            "link": self.link,
+            "path": str(self.get_channel_path()),
             "archived_on_disk": len(self.videos_on_disk),
             "missing": len(self.missing_videos),
+            "missing_video_ids": self.missing_videos,
             "offline": len(self.offline_videos),
+            "offline_video_ids": self.offline_videos,
             "downloaded_this_run": self.archived_this_time,
+            "download_failures": max(len(self.missing_videos) - self.archived_this_time, 0),
+            "errors": self.error_count,
+            "bytes_before": self.size_before,
+            "bytes_before_human": format_si(self.size_before),
             "bytes_added": self.size_downloaded,
             "bytes_added_human": format_si(self.size_downloaded),
+            "bytes_after": bytes_after,
+            "bytes_after_human": format_si(bytes_after),
         }
 
     def create_path(self) -> int:

@@ -49,6 +49,8 @@ class FakeChannel:
         self.missing_videos = self.missing
         self.archived_this_time = archived_this_time
         self.size_downloaded = size_downloaded
+        self.size_before = 0
+        self.error_count = 0
         self.videos_on_disk: dict[str, bool] = {}
         self.offline_videos: list[str] = []
         self.archive_calls: list[tuple[int, int]] = []
@@ -74,12 +76,22 @@ class FakeChannel:
     def run_report(self) -> dict:
         return {
             "name": self.name,
+            "link": f"https://example.test/{self.name}",
+            "path": f"/tmp/archive/{self.name}",
             "archived_on_disk": len(self.videos_on_disk),
             "missing": len(self.missing_videos),
+            "missing_video_ids": self.missing_videos,
             "offline": len(self.offline_videos),
+            "offline_video_ids": self.offline_videos,
             "downloaded_this_run": self.archived_this_time,
+            "download_failures": max(len(self.missing_videos) - self.archived_this_time, 0),
+            "errors": self.error_count,
+            "bytes_before": self.size_before,
+            "bytes_before_human": "fake",
             "bytes_added": self.size_downloaded,
             "bytes_added_human": "fake",
+            "bytes_after": self.size_before + self.size_downloaded,
+            "bytes_after_human": "fake",
         }
 
 
@@ -157,15 +169,23 @@ class ArchiveJobTests(unittest.TestCase):
 
         self.assertEqual(report["channels_scanned"], 1)
         self.assertEqual(report["channels_with_missing"], 1)
+        self.assertEqual(report["channels_skipped"], 0)
         self.assertEqual(report["files_on_disk"], 2)
         self.assertEqual(report["partial_files_deleted"], 1)
         self.assertEqual(report["videos_missing"], 1)
         self.assertEqual(report["videos_downloaded"], 1)
         self.assertEqual(report["videos_failed"], 0)
+        self.assertEqual(report["download_failures"], 0)
+        self.assertEqual(report["bytes_before"], 0)
         self.assertEqual(report["bytes_added"], 1024)
+        self.assertEqual(report["bytes_after"], 1024)
         self.assertEqual(report["channels"][0]["name"], "a")
+        self.assertEqual(report["channels"][0]["path"], "/tmp/archive/a")
         self.assertEqual(report["channels"][0]["missing"], 1)
+        self.assertEqual(report["channels"][0]["missing_video_ids"], ["ph1"])
         self.assertEqual(report["channels"][0]["offline"], 1)
+        self.assertEqual(report["channels"][0]["offline_video_ids"], ["ph-old"])
+        self.assertEqual(report["channels"][0]["download_failures"], 0)
 
     def test_run_reports_do_not_overwrite_older_runs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

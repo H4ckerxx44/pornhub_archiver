@@ -22,6 +22,7 @@ class ArchiveJob:
         self.total_deleted: int = 0
         self.total_missing: int = 0
         self.channels_with_missing: int = 0
+        self.bytes_before: int = 0
 
     # -------------------------------------------------------------------------
     # Public API
@@ -58,6 +59,7 @@ class ArchiveJob:
         for j, channel in enumerate(self.channels):
             file_count = channel.create_path()
             channel_size = channel.get_channel_size()
+            channel.size_before = channel_size
             total_files += file_count
             total_size += channel_size
             await logger.info(
@@ -77,6 +79,7 @@ class ArchiveJob:
         for j, channel in enumerate(self.channels):
             step_start = datetime.now(UTC)
             deleted = channel.cleanup()
+            channel.size_before = channel.get_channel_size()
             total_deleted += deleted
             elapsed = datetime.now(UTC) - step_start
             await logger.info(
@@ -85,6 +88,7 @@ class ArchiveJob:
             )
 
         await logger.info(f"system - cleanup took {datetime.now(UTC) - start}")
+        self.bytes_before = sum(channel.size_before for channel in self.channels)
         return total_deleted
 
     async def _collect_channels_with_missing_videos(self) -> list[Channel]:
@@ -169,13 +173,19 @@ class ArchiveJob:
             "elapsed_seconds": elapsed.total_seconds(),
             "channels_scanned": len(self.channels),
             "channels_with_missing": self.channels_with_missing,
+            "channels_skipped": len(self.channels) - self.channels_with_missing,
             "files_on_disk": self.total_files,
             "partial_files_deleted": self.total_deleted,
             "videos_missing": self.total_missing,
             "videos_downloaded": self.total_archived,
             "videos_failed": max(self.total_missing - self.total_archived, 0),
+            "download_failures": max(self.total_missing - self.total_archived, 0),
+            "bytes_before": self.bytes_before,
+            "bytes_before_human": format_si(self.bytes_before),
             "bytes_added": self.archived_data,
             "bytes_added_human": format_si(self.archived_data),
+            "bytes_after": self.bytes_before + self.archived_data,
+            "bytes_after_human": format_si(self.bytes_before + self.archived_data),
             "channels": [channel.run_report() for channel in self.channels],
         }
 

@@ -123,22 +123,36 @@ class ChannelReportTests(unittest.TestCase):
     def test_run_report_returns_channel_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             channel = make_channel(Path(tmp))
+            channel.create_path()
+            (channel.channel_path / "[ph0] title.mp4").write_bytes(b"x" * 3072)
             channel.videos_on_disk = {"ph0": True, "ph1": True}
             channel.missing_videos = ["ph2"]
             channel.offline_videos = ["ph-old"]
             channel.archived_this_time = 1
+            channel.error_count = 2
+            channel.size_before = 2048
             channel.size_downloaded = 1024
 
             self.assertEqual(
                 channel.run_report(),
                 {
                     "name": "example",
+                    "link": "https://www.pornhub.com/model/example",
+                    "path": str(channel.channel_path),
                     "archived_on_disk": 2,
                     "missing": 1,
+                    "missing_video_ids": ["ph2"],
                     "offline": 1,
+                    "offline_video_ids": ["ph-old"],
                     "downloaded_this_run": 1,
+                    "download_failures": 0,
+                    "errors": 2,
+                    "bytes_before": 2048,
+                    "bytes_before_human": "2.00 KiB",
                     "bytes_added": 1024,
                     "bytes_added_human": "1.00 KiB",
+                    "bytes_after": 3072,
+                    "bytes_after_human": "3.00 KiB",
                 },
             )
 
