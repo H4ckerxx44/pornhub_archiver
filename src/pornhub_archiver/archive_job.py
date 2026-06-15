@@ -33,10 +33,8 @@ class ArchiveJob:
         await logger.info(f"system - archiving {len(self.channels):,} channels")
 
         self.total_files = await self._create_paths()
-        await logger.info(f"system - found {self.total_files:,} files in total")
 
         self.total_deleted = await self._cleanup_paths()
-        await logger.info(f"system - deleted {self.total_deleted:,} files in cleanup")
 
         channels_to_download = await self._collect_channels_with_missing_videos()
 
@@ -68,8 +66,7 @@ class ArchiveJob:
                 f"(total: {total_files:,} / {format_si(total_size)})"
             )
 
-        await logger.info(f"system - creating/checking paths took {nice_timedelta(datetime.now(UTC), start)}")
-        await logger.info(f"system - total files: {total_files:,}, total size: {format_si(total_size)}")
+        await logger.info(f"system - total files: {total_files:,}, total size: {format_si(total_size)}, took: {nice_timedelta(datetime.now(UTC), start)}")
         return total_files
 
     async def _cleanup_paths(self) -> int:
@@ -87,8 +84,8 @@ class ArchiveJob:
                 f"deleted {deleted:,} files, took: {elapsed}"
             )
 
-        await logger.info(f"system - cleanup took {datetime.now(UTC) - start}")
         self.bytes_before = sum(channel.size_before for channel in self.channels)
+        await logger.info(f"system - deleted {self.total_deleted:,} files in cleanup, took {datetime.now(UTC) - start}")
         return total_deleted
 
     async def _collect_channels_with_missing_videos(self) -> list[Channel]:
@@ -96,7 +93,7 @@ class ArchiveJob:
         start = datetime.now(UTC)
         total_channels = len(self.channels)
 
-        await logger.info(f"system - fetching metadata for {total_channels:,} channels")
+        await logger.info(f"system - fetching metadata for {total_channels:,} channels...")
 
         # tasks = [self._fetch_channel_metadata(channel) for channel in self.channels]
         # results: list[tuple[Channel, list]] = await asyncio.gather(*tasks)
