@@ -238,7 +238,7 @@ class Channel:
                     return [video_id_from_link(e["url"]) for e in info["entries"]], False
                 except Exception:
                         self.error_count += 1
-                        await logger.warning(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} errors fetching video list")
+                        await logger.warning(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} error(s) fetching video list")
             return [], True
 
     def _scan_disk(self) -> None:
