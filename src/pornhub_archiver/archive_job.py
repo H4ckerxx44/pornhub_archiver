@@ -124,6 +124,9 @@ class ArchiveJob:
             total_offline += offline_count
             await logger.debug(s)
 
+            if total_count == missing_count:
+                await logger.warning("channel might have been renamed!")
+
         await logger.info(
             f"system - {total_missing:,} videos missing across {len(channels_to_download):,}/{total_channels:,} channels, {total_offline:,} are offline")
         self.total_missing = total_missing
