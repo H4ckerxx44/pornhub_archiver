@@ -1,4 +1,3 @@
-import os
 import re
 from datetime import datetime, UTC
 from pathlib import Path
@@ -6,14 +5,14 @@ from pathlib import Path
 from yt_dlp import YoutubeDL
 
 from . import db
-from .logger import logger
+from .config import CONCURRENT_FRAGMENT_DOWNLOADS
 from .functions import video_url_from_id, video_id_from_link, nice_timedelta, format_si, spacer
+from .logger import logger
 
 _LINK_SUFFIXES = ("/videos/", "/videos", "/")
 _VIDEO_FILENAME_RE = re.compile(r"^\[(?P<video_id>[^\]]+)]")
 
 MAX_ERRORS = 5
-CONCURRENT_FRAGMENT_DOWNLOADS = int(os.getenv("CONCURRENT_FRAGMENT_DOWNLOADS", 4))
 
 if CONCURRENT_FRAGMENT_DOWNLOADS < 1:
     raise ValueError("CONCURRENT_FRAGMENT_DOWNLOADS must be >= 1")

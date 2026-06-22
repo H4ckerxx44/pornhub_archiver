@@ -1,19 +1,13 @@
 import asyncio
-import os
-import pathlib
 import subprocess
+import sys
 from datetime import datetime, timedelta, UTC
 
 from . import db
 from .archive_job import ArchiveJob, STEP_SLEEP_INTERVAL
 from .channel import Channel, CONCURRENT_FRAGMENT_DOWNLOADS
-from .db import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
+from .config import DATA_PATH, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER, OPENSSL_CONF, RUN_ONCE, SLEEP_INTERVAL
 from .logger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
-
-DATA_PATH = pathlib.Path(os.getenv("DATA_PATH", "/data"))
-SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", 3600))
-RUN_ONCE = os.getenv("RUN_ONCE", "").strip().lower() in {"1", "true", "yes", "on"}
-OPENSSL_CONF = os.getenv("OPENSSL_CONF")
 
 VERSION = (4, 5, 8)
 

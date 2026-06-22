@@ -46,6 +46,7 @@ class FakeChannel:
 
 def import_run_module(run_once: str | None) -> tuple[types.ModuleType, FakeLogger]:
     sys.modules.pop("pornhub_archiver.run", None)
+    sys.modules.pop("pornhub_archiver.config", None)
 
     if run_once is None:
         os.environ.pop("RUN_ONCE", None)

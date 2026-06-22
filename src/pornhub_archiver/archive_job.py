@@ -1,14 +1,12 @@
 import asyncio
 import json
-import os
 from datetime import datetime, UTC
 from pathlib import Path
 
 from .channel import Channel
+from .config import STEP_SLEEP_INTERVAL, LOG_PATH
 from .functions import nice_timedelta, format_si
 from .logger import logger
-
-STEP_SLEEP_INTERVAL = int(os.getenv("STEP_SLEEP_INTERVAL", 15))
 
 
 class ArchiveJob:
@@ -201,8 +199,7 @@ class ArchiveJob:
 
     @staticmethod
     def _run_report_path(finished_at: datetime) -> Path | None:
-        log_path = os.getenv("LOG_PATH", "/logs").strip()
-        if not log_path:
+        if not LOG_PATH:
             return None
         timestamp = finished_at.astimezone(UTC).strftime("%Y-%m-%d_%H-%M-%S_%fZ")
-        return Path(log_path) / f"{timestamp}.json"
+        return Path(LOG_PATH) / f"{timestamp}.json"

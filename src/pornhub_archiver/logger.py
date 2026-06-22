@@ -1,5 +1,4 @@
 import asyncio
-import os
 import socket
 import time
 from pathlib import Path
@@ -7,31 +6,16 @@ from pathlib import Path
 import aiohttp
 import arrow
 
-_TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
-
-
-def _float_env(name: str, default: float) -> float:
-    try:
-        return float(os.getenv(name, str(default)))
-    except ValueError:
-        return default
-
-
-def _bool_env(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in _TRUTHY_ENV_VALUES
-
-
-LOKI_URL: str = os.getenv("LOKI_URL", "").strip()
-LOKI_USERNAME: str = os.getenv("LOKI_USERNAME", "").strip()
-LOKI_PASSWORD: str = os.getenv("LOKI_PASSWORD", "").strip()
-LOKI_LABELS: str = os.getenv("LOKI_LABELS", "").strip()
-LOKI_APP_LABEL: str = os.getenv("LOKI_APP_LABEL", "pornhub-archiver").strip()
-LOKI_TIMEOUT: float = _float_env("LOKI_TIMEOUT", 5)
-LOG_PATH: str = os.getenv("LOG_PATH", "/logs").strip()
-CONSOLE_COLORS: bool = _bool_env("CONSOLE_COLORS", True)
+from .config import (
+    CONSOLE_COLORS,
+    LOG_PATH,
+    LOKI_APP_LABEL,
+    LOKI_LABELS,
+    LOKI_PASSWORD,
+    LOKI_TIMEOUT,
+    LOKI_URL,
+    LOKI_USERNAME,
+)
 
 _RESET: str = "\033[0m"
 _BOLD: str = "\033[1m"

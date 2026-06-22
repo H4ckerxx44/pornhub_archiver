@@ -1,15 +1,9 @@
-import os
 from typing import Any
 
 import aiomysql
 
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = int(os.getenv('DB_PORT', '3306'))
-DB_USER = os.getenv('DB_USER', 'root')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+from .config import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 
-# DB_HOST = "192.168.0.100"
-# DB_PORT = 3306
 
 async def execute_query(sql: str, val: Any = ()):
     async with aiomysql.create_pool(
@@ -17,7 +11,7 @@ async def execute_query(sql: str, val: Any = ()):
             port=DB_PORT,
             user=DB_USER,
             password=DB_PASSWORD,
-            db="ph_archiver",
+            db=DB_NAME,
             maxsize=100,
             pool_recycle=15
     ) as pool:
