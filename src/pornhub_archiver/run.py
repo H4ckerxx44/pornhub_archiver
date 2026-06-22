@@ -9,7 +9,7 @@ from .channel import Channel, CONCURRENT_FRAGMENT_DOWNLOADS
 from .config import DATA_PATH, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER, OPENSSL_CONF, RUN_ONCE, SLEEP_INTERVAL
 from .logger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
 
-VERSION = (4, 5, 8)
+VERSION = (4, 6, 0)
 
 
 async def main() -> None:
