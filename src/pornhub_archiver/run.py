@@ -73,8 +73,8 @@ async def _print_startup_info() -> None:
 async def _update_yt_dlp() -> None:
     old = _yt_dlp_version()
     subprocess.run(
-        "pip install --upgrade --pre yt-dlp",
-        shell=True,
+        [sys.executable, "-m", "pip", "install", "--upgrade", "--pre", "yt-dlp"],
+        check=False,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -83,7 +83,7 @@ async def _update_yt_dlp() -> None:
 
 
 def _yt_dlp_version() -> str:
-    result = subprocess.run("yt-dlp --version", shell=True, capture_output=True, text=True)
+    result = subprocess.run(["yt-dlp", "--version"], check=False, capture_output=True, text=True)
     return result.stdout.strip()
 
 
