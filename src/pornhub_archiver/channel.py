@@ -91,9 +91,10 @@ class Channel:
         """Delete incomplete download fragments. Returns number of deleted files."""
         deleted = 0
         for file in self.channel_path.iterdir():
-            if file.is_file() and self._is_partial(file):
-                file.unlink()
-                deleted += 1
+            if file.is_file():
+                if self._is_partial(file) or self._is_ytdlp_file(file):
+                    file.unlink()
+                    deleted += 1
         return deleted
 
     async def get_metadata(self, channel_number: int, total_channels: int) -> list[str]:
@@ -322,6 +323,10 @@ class Channel:
     @staticmethod
     def _is_partial(file: Path) -> bool:
         return file.suffix == ".part" or ".part-Frag" in file.name
+
+    @staticmethod
+    def _is_ytdlp_file(file: Path) -> bool:
+        return file.suffix == ".ytdl"
 
     @classmethod
     async def _from_row(cls, row: tuple, data_path: Path) -> "Channel":
