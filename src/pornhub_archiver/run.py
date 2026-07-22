@@ -25,6 +25,7 @@ VERSION = (4, 6, 1)
 async def main() -> None:
     await logger.start()
     try:
+        await db.start()
         await _print_startup_info()
         await _update_yt_dlp()
         await _ensure_db_table_exist()
@@ -37,6 +38,7 @@ async def main() -> None:
             await logger.info(f"system - next run at {datetime.now(UTC) + timedelta(seconds=SLEEP_INTERVAL)}")
             await asyncio.sleep(SLEEP_INTERVAL)
     finally:
+        await db.close()
         await logger.stop()
 
 
@@ -50,6 +52,9 @@ async def _run_archive_once() -> None:
 
 
 async def _print_startup_info() -> None:
+    for warning in CONFIG_WARNINGS:
+        await logger.warning(f"system - configuration fallback: {warning}")
+
     version_str = ".".join(str(v) for v in VERSION)
     settings = {
         "version":             f"v{version_str}",

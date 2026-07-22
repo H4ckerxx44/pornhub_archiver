@@ -47,6 +47,14 @@ class FakeChannel:
         return ["channel"]
 
 
+async def _start_db() -> None:
+    return None
+
+
+async def _close_db() -> None:
+    return None
+
+
 def import_run_module(run_once: str | None) -> tuple[types.ModuleType, FakeLogger]:
     sys.modules.pop("pornhub_archiver.run", None)
     sys.modules.pop("pornhub_archiver.config", None)
@@ -66,6 +74,8 @@ def import_run_module(run_once: str | None) -> tuple[types.ModuleType, FakeLogge
         DB_USER="root",
         DB_PASSWORD="",
         execute_query=None,
+        start=_start_db,
+        close=_close_db,
     )
     sys.modules["pornhub_archiver.archive_job"] = types.SimpleNamespace(
         ArchiveJob=FakeArchiveJob,

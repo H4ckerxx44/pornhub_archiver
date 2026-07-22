@@ -53,6 +53,12 @@ class FakePool:
     def acquire(self) -> FakeConnection:
         return self._connection
 
+    def close(self) -> None:
+        return None
+
+    async def wait_closed(self) -> None:
+        return None
+
 
 class FakeAiomysql:
     def __init__(self) -> None:
@@ -61,7 +67,7 @@ class FakeAiomysql:
         self.pool = FakePool(self.connection)
         self.create_pool_kwargs: dict | None = None
 
-    def create_pool(self, **kwargs: object) -> FakePool:
+    async def create_pool(self, **kwargs: object) -> FakePool:
         self.create_pool_kwargs = kwargs
         return self.pool
 
@@ -84,6 +90,26 @@ class DbTests(unittest.TestCase):
         self.assertEqual(fake_aiomysql.connection.commits, 1)
         self.assertEqual(fake_aiomysql.create_pool_kwargs["db"], "ph_archiver")
         self.assertEqual(fake_aiomysql.create_pool_kwargs["pool_recycle"], 15)
+
+    def test_execute_query_reuses_pool(self) -> None:
+        fake_aiomysql = FakeAiomysql()
+        db = import_db_module(fake_aiomysql)
+
+        asyncio.run(db.execute_query("select 1"))
+        asyncio.run(db.execute_query("select 2"))
+
+        self.assertEqual(fake_aiomysql.cursor.executed, [("select 1", ()), ("select 2", ())])
+        self.assertEqual(fake_aiomysql.create_pool_kwargs["db"], "ph_archiver")
+
+    def test_close_releases_pool(self) -> None:
+        fake_aiomysql = FakeAiomysql()
+        db = import_db_module(fake_aiomysql)
+
+        asyncio.run(db.execute_query("select 1"))
+        asyncio.run(db.close())
+        asyncio.run(db.close())
+
+        self.assertIsNone(db._pool)
 
     def test_create_table_executes_channels_schema(self) -> None:
         fake_aiomysql = FakeAiomysql()
