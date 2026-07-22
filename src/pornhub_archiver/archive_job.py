@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 from pathlib import Path
 
 from .channel import Channel
-from .config import STEP_SLEEP_INTERVAL, LOG_PATH
+from .config import STEP_SLEEP_INTERVAL, current_log_path
 from .functions import nice_timedelta, format_si
 from .logger import logger
 
@@ -198,7 +198,8 @@ class ArchiveJob:
 
     @staticmethod
     def _run_report_path(finished_at: datetime) -> Path | None:
-        if not LOG_PATH:
+        log_path = current_log_path()
+        if not log_path:
             return None
         timestamp = finished_at.astimezone(UTC).strftime("%Y-%m-%d_%H-%M-%S_%fZ")
-        return Path(LOG_PATH) / f"{timestamp}.json"
+        return Path(log_path) / f"{timestamp}.json"

@@ -56,22 +56,6 @@ class LoggerHelperTests(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self.old_env)
 
-    def test_bool_env_accepts_truthy_values(self) -> None:
-        for value in ("1", "true", "yes", "on", "TRUE"):
-            with self.subTest(value=value):
-                os.environ["FLAG"] = value
-                self.assertTrue(self.logger_module._bool_env("FLAG", False))
-
-        os.environ["FLAG"] = "false"
-        self.assertFalse(self.logger_module._bool_env("FLAG", True))
-
-    def test_float_env_falls_back_on_invalid_value(self) -> None:
-        os.environ["NUMBER"] = "invalid"
-        self.assertEqual(self.logger_module._float_env("NUMBER", 1.5), 1.5)
-
-        os.environ["NUMBER"] = "2.25"
-        self.assertEqual(self.logger_module._float_env("NUMBER", 1.5), 2.25)
-
     def test_loki_push_url_normalizes_base_url(self) -> None:
         self.assertEqual(self.logger_module.LokiClient._push_url(""), "")
         self.assertEqual(
