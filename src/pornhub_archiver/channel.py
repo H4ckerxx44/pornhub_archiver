@@ -123,7 +123,7 @@ class Channel:
             if not success:
                 errors += 1
 
-        total_size_after = self.size_before + self.size_downloaded
+        total_size_after = self._channel_size_on_disk()
         elapsed = nice_timedelta(datetime.now(UTC), channel_start)
 
         await logger.info(f"\t\t{spacer()} RESULT {spacer()}")
