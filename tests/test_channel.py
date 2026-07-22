@@ -118,6 +118,49 @@ class ChannelDiskTests(unittest.TestCase):
             self.assertFalse(part.exists())
             self.assertFalse(fragment.exists())
 
+    def test_successful_download_updates_videos_on_disk(self) -> None:
+        class SuccessfulYoutubeDL(_YoutubeDL):
+            def download(self, url: str) -> int:
+                (channel.channel_path / "[ph123] title.mp4").write_bytes(b"video")
+                return 0
+
+        original_youtube_dl = channel_module.YoutubeDL
+        channel_module.YoutubeDL = SuccessfulYoutubeDL
+        self.addCleanup(setattr, channel_module, "YoutubeDL", original_youtube_dl)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            channel = make_channel(Path(tmp))
+            channel.create_path()
+
+            success = asyncio.run(
+                channel._download_video("ph123", 0, 1, datetime.now(UTC))
+            )
+
+            self.assertTrue(success)
+            self.assertIn("ph123", channel.videos_on_disk)
+            self.assertEqual(channel.archived_this_time, 1)
+
+    def test_failed_download_does_not_update_videos_on_disk(self) -> None:
+        class FailedYoutubeDL(_YoutubeDL):
+            def download(self, url: str) -> int:
+                raise RuntimeError("download failed")
+
+        original_youtube_dl = channel_module.YoutubeDL
+        channel_module.YoutubeDL = FailedYoutubeDL
+        self.addCleanup(setattr, channel_module, "YoutubeDL", original_youtube_dl)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            channel = make_channel(Path(tmp))
+            channel.create_path()
+
+            success = asyncio.run(
+                channel._download_video("ph123", 0, 1, datetime.now(UTC))
+            )
+
+            self.assertFalse(success)
+            self.assertNotIn("ph123", channel.videos_on_disk)
+            self.assertEqual(channel.archived_this_time, 0)
+
 
 class ChannelReportTests(unittest.TestCase):
     def test_run_report_returns_channel_summary(self) -> None:
@@ -227,6 +270,23 @@ class MetadataRetryTests(unittest.TestCase):
         self.assertEqual(missing, [])
         self.assertEqual(channel.missing_videos, [])
         self.assertEqual(channel.offline_videos, [])
+
+    def test_malformed_metadata_is_treated_as_a_fetch_failure(self) -> None:
+        class MalformedYoutubeDL(_YoutubeDL):
+            def extract_info(self, url: str, download: bool) -> dict:
+                return {"entries": [None, {"url": "ph123"}]}
+
+        original_youtube_dl = channel_module.YoutubeDL
+        channel_module.YoutubeDL = MalformedYoutubeDL
+        self.addCleanup(setattr, channel_module, "YoutubeDL", original_youtube_dl)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            channel = make_channel(Path(tmp))
+            ids, error = asyncio.run(channel._fetch_channel_video_ids(0, 1))
+
+        self.assertTrue(error)
+        self.assertEqual(ids, [])
+        self.assertEqual(channel.error_count, MAX_ERRORS)
 
 
 if __name__ == "__main__":
