@@ -5,13 +5,13 @@ description = "pornhuber archiver"
 requires-python = ">=3.14"
 dependencies = [
     "aiomysql>=0.3.2",
-    "aiohttp>=3.13.2",
+    "aiohttp>=3.14.2",
     "arrow>=1.4.0",
-    "humanize>=4.14.0",
+    "humanize>=4.16.0",
     "pyan==0.1.3",
     "rich>=15.0.0",
-    "yt-dlp>=2026.2.21",
-    "pyrefly>=0.60.0",
+    "yt-dlp>=2026.7.4",
+    "pyrefly>=1.1.1",
 ]
 
 [project.optional-dependencies]
