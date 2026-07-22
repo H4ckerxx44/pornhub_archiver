@@ -82,7 +82,7 @@ class ArchiveJob:
             )
 
         self.bytes_before = sum(channel.size_before for channel in self.channels)
-        await logger.info(f"system - deleted {self.total_deleted:,} files in cleanup, took {datetime.now(UTC) - start}")
+        await logger.info(f"system - deleted {total_deleted:,} files in cleanup, took {datetime.now(UTC) - start}")
         return total_deleted
 
     async def _collect_channels_with_missing_videos(self) -> list[Channel]:
