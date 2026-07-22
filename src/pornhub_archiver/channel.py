@@ -41,6 +41,7 @@ class Channel:
         self.videos_on_disk: dict[str, bool] = {}
         self.missing_videos: list[str] = []
         self.offline_videos: list[str] = []
+        self.metadata_fetch_failed = False
         self.archived_this_time: int = 0
         self.error_count: int = 0
         self.size_before: int = 0  # total channel bytes on disk before this run
@@ -69,6 +70,7 @@ class Channel:
             "missing_video_ids": self.missing_videos,
             "offline": len(self.offline_videos),
             "offline_video_ids": self.offline_videos,
+            "metadata_fetch_failed": self.metadata_fetch_failed,
             "downloaded_this_run": self.archived_this_time,
             "download_failures": max(len(self.missing_videos) - self.archived_this_time, 0),
             "errors": self.error_count,
@@ -97,7 +99,7 @@ class Channel:
                     deleted += 1
         return deleted
 
-    async def get_metadata(self, channel_number: int, total_channels: int) -> list[str]:
+    async def get_metadata(self, channel_number: int, total_channels: int) -> tuple[list[str], bool]:
         return await self._fetch_missing_videos(channel_number, total_channels)
 
     async def archive(self, current_channel_number: int, total_channels: int) -> None:
@@ -215,22 +217,42 @@ class Channel:
     # Metadata / disk scanning
     # -------------------------------------------------------------------------
 
-    async def _fetch_missing_videos(self, channel_number: int, total_channels: int) -> list[str]:
+    async def _fetch_missing_videos(self, current_channel_number: int, total_channels: int) -> tuple[list[str], bool]:
+        """
+            Determines missing videos from a channel
+        :param current_channel_number: current channel number in archiving run
+        :param total_channels: total number of channels in archiving run
+        :return: List of videos on the channel, if any and whether metadata fetching failed or not
+        """
         self._scan_disk()
         await self._set_archived_video_count()
 
-        channel_videos, error = await self._fetch_channel_video_ids(channel_number, total_channels)
+        channel_videos, error = await self._fetch_channel_video_ids(current_channel_number, total_channels)
 
-        if not error:
-            await self._update_last_queried()
-            await self._set_total_videos(len(channel_videos))
+        self.metadata_fetch_failed = error
+        if error:
+            # An empty result after a failed request is not an empty channel.
+            # Leave the remote-dependent state unknown instead of marking all
+            # local videos as offline.
+            self.missing_videos = []
+            self.offline_videos = []
+            return self.missing_videos, True
+
+        await self._update_last_queried()
+        await self._set_total_videos(len(channel_videos))
 
         channel_video_set = set(channel_videos)
         self.offline_videos = [v for v in self.videos_on_disk if v not in channel_video_set]
         self.missing_videos = [v for v in channel_videos if v not in self.videos_on_disk]
-        return self.missing_videos
+        return self.missing_videos, False
 
     async def _fetch_channel_video_ids(self, current_channel_number: int, total_channels: int) -> tuple[list[str], bool]:
+        """
+            Returns videos present on a channel, if any, also indicates if metadata fetching failed or not
+        :param current_channel_number: current channel number in archiving run
+        :param total_channels: total number of channels in archiving run
+        :return: List of videos on the channel, if any and wheter metadata fetching failed or not
+        """
         with YoutubeDL(self.metadata_yt_dlp_options) as yt:
             while self.error_count < MAX_ERRORS:
                 try:

@@ -104,6 +104,19 @@ class ArchiveJob:
         total_offline = 0
 
         for channel, missing_videos in results:
+            if channel.metadata_fetch_failed:
+                archived_count = len(channel.videos_on_disk)
+                if archived_count > 0:
+                    await logger.warning(
+                        f"\t{channel.get_name()} may be offline or renamed; "
+                        "metadata could not be fetched"
+                    )
+                await logger.warning(
+                    f"\t{channel.get_name()} - metadata unavailable; "
+                    "skipping missing/offline video analysis"
+                )
+                continue
+
             missing_count = len(missing_videos)
             archived_count = len(channel.videos_on_disk)
             total_count = archived_count + missing_count
@@ -123,7 +136,7 @@ class ArchiveJob:
 
             # detects channels that potentially were renamed
             # channels, that were fully archived but then removed have all archived videos offline
-            if archived_count == offline_count:
+            if archived_count > 0 and archived_count == offline_count:
                 await logger.warning(f"\t{channel.get_name()} might be offline or could have been renamed! (name change, model -> pornstar | pornstar -> model)")
 
         await logger.info(
@@ -151,16 +164,19 @@ class ArchiveJob:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    async def _fetch_channel_metadata(channel: Channel, channel_number: int, total_channels: int) -> tuple[Channel, list]:
+    async def _fetch_channel_metadata(channel: Channel, channel_number: int, total_channels: int) -> tuple[Channel, list[str]]:
         start = datetime.now(UTC)
-        videos_to_download = await channel.get_metadata(channel_number, total_channels)
+        videos_to_download, error = await channel.get_metadata(channel_number, total_channels)
+        if error:
+            await logger.warning(f"\t[{channel_number+1}/{total_channels}] {channel.get_name()} - metadata fetching failed in {nice_timedelta(datetime.now(UTC), start)}")
+            return channel, videos_to_download
         msg = f"\t[{channel_number+1}/{total_channels}] {channel.get_name()} - metadata fetched in {nice_timedelta(datetime.now(UTC), start)}"
 
         if STEP_SLEEP_INTERVAL > 0:
             msg += f", sleeping {STEP_SLEEP_INTERVAL:,} seconds..."
-
         await logger.info(msg)
         await asyncio.sleep(STEP_SLEEP_INTERVAL)
+
         return channel, videos_to_download
 
     async def _write_run_report(self, started_at: datetime, finished_at: datetime, elapsed) -> None:

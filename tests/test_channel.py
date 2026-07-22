@@ -144,6 +144,7 @@ class ChannelReportTests(unittest.TestCase):
                     "missing_video_ids": ["ph2"],
                     "offline": 1,
                     "offline_video_ids": ["ph-old"],
+                    "metadata_fetch_failed": False,
                     "downloaded_this_run": 1,
                     "download_failures": 0,
                     "errors": 2,
@@ -205,6 +206,27 @@ class MetadataRetryTests(unittest.TestCase):
         self.assertTrue(error)
         self.assertEqual(ids, [])
         self.assertEqual(attempts, MAX_ERRORS)
+
+    def test_fetch_missing_videos_does_not_mark_local_videos_offline_on_error(self) -> None:
+        async def failed_metadata_fetch(
+            channel_number: int,
+            total_channels: int,
+        ) -> tuple[list[str], bool]:
+            return [], True
+
+        with tempfile.TemporaryDirectory() as tmp:
+            channel = make_channel(Path(tmp))
+            channel.create_path()
+            (channel.channel_path / "[ph123] title.mp4").touch()
+            channel._fetch_channel_video_ids = failed_metadata_fetch
+
+            missing, error = asyncio.run(channel._fetch_missing_videos(0, 1))
+
+        self.assertTrue(error)
+        self.assertTrue(channel.metadata_fetch_failed)
+        self.assertEqual(missing, [])
+        self.assertEqual(channel.missing_videos, [])
+        self.assertEqual(channel.offline_videos, [])
 
 
 if __name__ == "__main__":

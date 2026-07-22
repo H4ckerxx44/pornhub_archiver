@@ -25,8 +25,12 @@ class _Logger:
         self.messages.append(("error", msg))
 
 
+async def _execute_query(sql: str, val: object = ()) -> tuple:
+    return ()
+
+
 sys.modules.setdefault("yt_dlp", types.SimpleNamespace(YoutubeDL=object))
-sys.modules.setdefault("pornhub_archiver.db", types.SimpleNamespace(execute_query=None))
+sys.modules.setdefault("pornhub_archiver.db", types.SimpleNamespace(execute_query=_execute_query))
 sys.modules.setdefault("pornhub_archiver.logger", types.SimpleNamespace(logger=_Logger()))
 
 import pornhub_archiver.archive_job as archive_job_module
@@ -56,6 +60,7 @@ class FakeChannel:
         self.error_count = 0
         self.videos_on_disk: dict[str, bool] = {}
         self.offline_videos: list[str] = []
+        self.metadata_fetch_failed = False
         self.archive_calls: list[tuple[int, int]] = []
 
     def create_path(self) -> int:
@@ -70,8 +75,8 @@ class FakeChannel:
     def get_name(self) -> str:
         return self.name
 
-    async def get_metadata(self, channel_number: int, total_channels: int) -> list[str]:
-        return self.missing
+    async def get_metadata(self, channel_number: int, total_channels: int) -> tuple[list[str], bool]:
+        return self.missing, self.metadata_fetch_failed
 
     async def archive(self, current_channel_number: int, total_channels: int) -> None:
         self.archive_calls.append((current_channel_number, total_channels))
