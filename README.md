@@ -237,47 +237,52 @@ When a video is missing on disk but still appears in the channel listing, the to
 ```mermaid
 flowchart TD
     A[Process starts] --> B[Start local and Loki loggers]
-    B --> C[Print startup config]
-    C --> D[Update yt-dlp]
-    D --> E{channels table exists?}
-    E -- no --> F[Create channels table]
-    E -- yes --> G[Start archival pass]
-    F --> G
+    B --> C[Start database connection pool]
+    C --> D[Print startup configuration]
+    D --> E[Update yt-dlp]
+    E --> F{channels table exists?}
+    F -- no --> G[Create channels table]
+    F -- yes --> H[Begin archival loop]
+    G --> H
 
-    G --> H[Load active channels from MariaDB]
-    H --> I[Create/check each /data/name folder]
-    I --> J[Remove partial download fragments]
-    J --> K[Fetch metadata for each channel]
+    H --> I[Load active channels from MariaDB]
+    I --> J[Create/check channel directories under DATA_PATH]
+    J --> K[Remove partial .part, .part-Frag*, and .ytdl files]
+    K --> L[Fetch metadata for all channels]
 
-    K --> L["Scan disk for files named with [video_id] prefix"]
-    L --> M[Update archived_videos count in DB]
-    M --> N[Fetch current channel/videos list]
-    N --> O{Metadata fetch succeeded?}
-    O -- yes --> P[Update last_queried_at and total_videos in DB]
-    O -- no --> Q[Keep existing DB metadata for that channel]
-    P --> R[Compare website video IDs with disk video IDs]
-    Q --> R
+    L --> M[Scan channel directory for video_id filenames]
+    M --> N[Update archived_videos from local disk]
+    N --> O[Fetch current channel video IDs with retries]
+    O --> P{Metadata fetch succeeded?}
+    P -- no --> Q[Keep total_videos and last_queried_at; skip missing/offline analysis]
+    P -- yes --> R[Update last_queried_at and total_videos]
+    R --> S[Compare remote IDs with IDs on disk]
+    S --> T[Record missing and now-offline videos]
+    T --> AJ[Wait STEP_SLEEP_INTERVAL seconds]
+    Q --> U{More channels to inspect?}
+    AJ --> U
+    U -- yes --> M
+    U -- no --> V[Build list of channels with missing videos]
 
-    R --> S[Record missing and now-offline video IDs]
-    S --> T{Any missing videos?}
-    T -- no --> U[Skip channel downloads]
-    T -- yes --> V[Download missing videos with yt-dlp]
-    V --> W[Write video files, thumbnails, and metadata under /data/name]
-    W --> X[Increment archived_videos after each successful video]
-    U --> Y{More channels to download?}
-    X --> Y
-    Y -- yes --> Z[Wait STEP_SLEEP_INTERVAL seconds]
-    Z --> V
-    Y -- no --> AA[Log run summary]
+    V --> W{More channels to download?}
+    W -- no --> X[Log archival summary]
+    W -- yes --> Y[Download missing videos for the next channel]
+    Y --> Z{More videos in this channel?}
+    Z -- yes --> Y
+    Z -- no --> AA{More channels to download?}
+    AA -- yes --> AB[Wait STEP_SLEEP_INTERVAL seconds]
+    AB --> Y
+    AA -- no --> X
 
-    AA --> AB{LOG_PATH set?}
-    AB -- yes --> AC[Write timestamped JSON run report under /logs]
-    AB -- no --> AD[Skip JSON report]
-    AC --> AE{RUN_ONCE enabled?}
-    AD --> AE
-    AE -- yes --> AF[Stop loggers and exit]
-    AE -- no --> AG[Log next run time and sleep SLEEP_INTERVAL seconds]
-    AG --> G
+    X --> AC{LOG_PATH set?}
+    AC -- yes --> AD[Write timestamped JSON report under LOG_PATH]
+    AC -- no --> AE[Skip JSON report]
+    AD --> AF{RUN_ONCE enabled?}
+    AE --> AF
+    AF -- yes --> AG[Close database and stop loggers]
+    AG --> AH[Exit]
+    AF -- no --> AI[Log next run time and sleep SLEEP_INTERVAL seconds]
+    AI --> H
 ```
 
 ## Contributing
