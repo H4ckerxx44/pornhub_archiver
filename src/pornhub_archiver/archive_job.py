@@ -40,7 +40,6 @@ class ArchiveJob:
 
         elapsed = nice_timedelta(datetime.now(UTC), run_start)
         await logger.info(f"system - total runtime: {elapsed}")
-        await logger.info(f"system - total archived this run: {self.total_archived:,}")
         await self._write_run_report(run_start, datetime.now(UTC), elapsed)
 
     # -------------------------------------------------------------------------
@@ -143,7 +142,7 @@ class ArchiveJob:
                 await asyncio.sleep(STEP_SLEEP_INTERVAL)
 
         await logger.info(f"system - downloading {total:,} channels took {nice_timedelta(datetime.now(UTC), start)}")
-        await logger.info(f"system - downloaded {self.total_archived} videos, size: +{format_si(self.archived_data)}")
+        await logger.info(f"system - downloaded {self.total_archived:,} videos, size: +{format_si(self.archived_data)}")
 
     # -------------------------------------------------------------------------
     # Helpers
