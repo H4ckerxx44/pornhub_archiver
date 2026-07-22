@@ -121,7 +121,6 @@ class Channel:
                 video_id, i, total, channel_start
             )
             if not success:
-                await logger.error(f"\t\tvideo {video_url_from_id(video_id)} errored")
                 errors += 1
 
         total_size_after = self.size_before + self.size_downloaded
@@ -212,6 +211,7 @@ class Channel:
 
         except Exception:
             self.error_count += 1
+            await logger.error(f"\t\tvideo {url} errored | error(s): {self.error_count:,}")
             return False
 
     # -------------------------------------------------------------------------
