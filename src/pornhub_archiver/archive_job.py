@@ -92,7 +92,7 @@ class ArchiveJob:
 
         await logger.info(f"system - fetching metadata for {total_channels:,} channels...")
 
-        # tasks = [self._fetch_channel_metadata(channel) for channel in self.channels]
+        # tasks = [self._fetch_channel_metadata(channel, i, total_channels) for i, channel in enumerate(self.channels)]
         # results: list[tuple[Channel, list]] = await asyncio.gather(*tasks)
 
         results: list[tuple[Channel, list]] = [await self._fetch_channel_metadata(channel, i, total_channels) for i, channel in enumerate(self.channels)]
