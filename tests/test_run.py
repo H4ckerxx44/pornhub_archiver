@@ -21,6 +21,9 @@ class FakeLogger:
     async def info(self, msg: str) -> None:
         self.messages.append(msg)
 
+    async def warning(self, msg: str) -> None:
+        self.messages.append(msg)
+
 
 class FakeArchiveJob:
     instances: list["FakeArchiveJob"] = []
