@@ -37,7 +37,7 @@ Mounting `/data` to a large HDD is highly recommended.
 | `DB_HOST`                       | `localhost`        | Host running the MariaDB server.                               |
 | `DB_PORT`                       | `3306`             | MariaDB server port.                                           |
 | `DB_USER`                       | `root`             | Database user used by the archiver.                            |
-| `DB_PASSWORD`                   | `root`             | Database password.                                             |
+| `DB_PASSWORD`                   | empty              | Database password.                                             |
 | `LOKI_URL`                      | empty              | Loki base URL or push endpoint. Leave empty to disable Loki.   |
 | `LOKI_USERNAME`                 | empty              | Optional Loki basic-auth username.                             |
 | `LOKI_PASSWORD`                 | empty              | Optional Loki basic-auth password.                             |
