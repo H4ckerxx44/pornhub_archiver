@@ -206,6 +206,7 @@ class Channel:
                 f", took {video_elapsed} (channel: {channel_elapsed} so far)"
                 f", size: {format_si(video_size)} (+{format_si(self.size_downloaded)} so far)"
             )
+            self.videos_on_disk[video_id] = True
             await self._increment_archived_videos()
             return True
 
