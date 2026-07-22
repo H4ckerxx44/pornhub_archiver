@@ -331,8 +331,14 @@ class Channel:
     @classmethod
     async def _from_row(cls, row: tuple, data_path: Path) -> "Channel":
         db_id, link, added_on, last_queried_at, total_videos, archived_videos = row
-        link = await cls._normalize_link(link)
-        return cls(db_id, link, total_videos, archived_videos, added_on, last_queried_at, data_path)
+        normalized_link = await cls._normalize_link(link)
+        if normalized_link != link:
+            await db.execute_query(
+                "update channels set link=%s where id=%s",
+                (normalized_link, db_id),
+            )
+        await logger.warning(f"normalized link - {link} -> {normalized_link}")
+        return cls(db_id, normalized_link, total_videos, archived_videos, added_on, last_queried_at, data_path)
 
     @staticmethod
     async def _normalize_link(link: str) -> str:
