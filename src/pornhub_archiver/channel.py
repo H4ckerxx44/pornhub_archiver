@@ -43,7 +43,8 @@ class Channel:
         self.offline_videos: list[str] = []
         self.metadata_fetch_failed = False
         self.archived_this_time: int = 0
-        self.error_count: int = 0
+        self.metadata_error_count: int = 0
+        self.download_error_count: int = 0
         self.size_before: int = 0  # total channel bytes on disk before this run
         self.size_downloaded: int = 0  # bytes added during this run
         self.metadata_yt_dlp_options = self._build_metadata_yt_dlp_options()
@@ -73,6 +74,8 @@ class Channel:
             "metadata_fetch_failed": self.metadata_fetch_failed,
             "downloaded_this_run": self.archived_this_time,
             "download_failures": max(len(self.missing_videos) - self.archived_this_time, 0),
+            "metadata_errors": self.metadata_error_count,
+            "download_errors": self.download_error_count,
             "errors": self.error_count,
             "bytes_before": self.size_before,
             "bytes_before_human": format_si(self.size_before),
@@ -81,6 +84,17 @@ class Channel:
             "bytes_after": bytes_after,
             "bytes_after_human": format_si(bytes_after),
         }
+
+    @property
+    def error_count(self) -> int:
+        """Return the combined metadata and download error count."""
+        return self.metadata_error_count + self.download_error_count
+
+    @error_count.setter
+    def error_count(self, value: int) -> None:
+        """Keep compatibility with callers that set the legacy aggregate counter."""
+        self.metadata_error_count = 0
+        self.download_error_count = value
 
     def create_path(self) -> int:
         """Ensure channel directory exists. Returns number of existing files."""
@@ -105,6 +119,7 @@ class Channel:
     async def archive(self, current_channel_number: int, total_channels: int) -> None:
         channel_start = datetime.now(UTC)
         self.archived_this_time = 0
+        self.download_error_count = 0
         self.size_before = self._channel_size_on_disk()
         self.size_downloaded = 0
         errors = 0
@@ -210,8 +225,8 @@ class Channel:
             return True
 
         except Exception:
-            self.error_count += 1
-            await logger.error(f"\t\tvideo {url} errored | error(s): {self.error_count:,}")
+            self.download_error_count += 1
+            await logger.error(f"\t\tvideo {url} errored | error(s): {self.download_error_count:,}")
             return False
 
     # -------------------------------------------------------------------------
@@ -254,14 +269,15 @@ class Channel:
         :param total_channels: total number of channels in archiving run
         :return: List of videos on the channel, if any and wheter metadata fetching failed or not
         """
+        self.metadata_error_count = 0
         with YoutubeDL(self.metadata_yt_dlp_options) as yt:
-            while self.error_count < MAX_ERRORS:
+            while self.metadata_error_count < MAX_ERRORS:
                 try:
                     info = yt.extract_info(f"{self.link}/videos", download=False)
                     return [video_id_from_link(e["url"]) for e in info["entries"]], False
                 except Exception:
-                        self.error_count += 1
-                        await logger.warning(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.error_count:,} error(s) fetching video list")
+                        self.metadata_error_count += 1
+                        await logger.warning(f"\t[{current_channel_number+1}/{total_channels}] {self.name} - {self.metadata_error_count:,} error(s) fetching video list")
             return [], True
 
     def _scan_disk(self) -> None:

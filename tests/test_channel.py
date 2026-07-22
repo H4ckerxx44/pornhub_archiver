@@ -190,6 +190,8 @@ class ChannelReportTests(unittest.TestCase):
                     "metadata_fetch_failed": False,
                     "downloaded_this_run": 1,
                     "download_failures": 0,
+                    "metadata_errors": 0,
+                    "download_errors": 2,
                     "errors": 2,
                     "bytes_before": 2048,
                     "bytes_before_human": "2.00 KiB",
