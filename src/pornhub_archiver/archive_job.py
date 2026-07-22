@@ -121,8 +121,10 @@ class ArchiveJob:
             total_offline += offline_count
             await logger.debug(s)
 
-            if total_count == missing_count:
-                await logger.warning(f"\tchannel {channel.get_name()} might have been renamed!")
+            # detects channels that potentially were renamed
+            # channels, that were fully archived but then removed have all archived videos offline
+            if archived_count == offline_count:
+                await logger.warning(f"\t{channel.get_name()} might be offline or could have been renamed! (name change, model -> pornstar | pornstar -> model)")
 
         await logger.info(
             f"system - {total_missing:,} videos missing across {len(channels_to_download):,}/{total_channels:,} channels, {total_offline:,} are offline")
