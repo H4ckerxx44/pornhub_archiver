@@ -337,7 +337,7 @@ class Channel:
                 "update channels set link=%s where id=%s",
                 (normalized_link, db_id),
             )
-        await logger.warning(f"normalized link - {link} -> {normalized_link}")
+            await logger.warning(f"normalized link - {link} -> {normalized_link}")
         return cls(db_id, normalized_link, total_videos, archived_videos, added_on, last_queried_at, data_path)
 
     @staticmethod
