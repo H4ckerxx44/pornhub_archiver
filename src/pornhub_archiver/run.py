@@ -19,7 +19,7 @@ from .config import (
 )
 from .logger import CONSOLE_COLORS, LOG_PATH, LOKI_APP_LABEL, LOKI_LABELS, LOKI_TIMEOUT, LOKI_URL, logger
 
-VERSION = (4, 7, 1)
+VERSION = (4, 7, 0)
 
 
 async def main() -> None:
