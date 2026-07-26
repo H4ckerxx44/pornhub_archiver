@@ -352,7 +352,7 @@ class Channel:
             "restrictfilenames": True,
             "concurrent_fragment_downloads": CONCURRENT_FRAGMENT_DOWNLOADS,
             "fragment_retries": 10,
-            "writethumbnail": True,
+            "writethumbnail": False,
             "postprocessors": [
                 {"key": "FFmpegMetadata", "add_chapters": True, "add_metadata": True, "add_infojson": "if_exists"},
                 # {"key": "EmbedThumbnail", "already_have_thumbnail": False},
