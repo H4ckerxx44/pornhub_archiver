@@ -108,7 +108,7 @@ class Channel:
         deleted = 0
         for file in self.channel_path.iterdir():
             if file.is_file():
-                if self._is_partial(file) or self._is_ytdlp_file(file):
+                if self._is_partial(file) or self._is_ytdlp_file(file) or self._is_leftover_thumbnail(file):
                     file.unlink()
                     deleted += 1
         return deleted
@@ -386,3 +386,8 @@ class Channel:
                 await logger.warning(f"WRONG PATH FORMAT - {link} ends with '{suffix}'")
                 return link[: -len(suffix)]
         return link
+
+    @staticmethod
+    def _is_leftover_thumbnail(file):
+        return file.suffix == ".jpg" or ".png"
+
