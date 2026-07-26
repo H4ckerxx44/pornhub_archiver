@@ -389,5 +389,5 @@ class Channel:
 
     @staticmethod
     def _is_leftover_thumbnail(file):
-        return file.suffix == ".jpg" or ".png"
+        return file.suffix == ".jpg" or file.suffix == ".png"
 
