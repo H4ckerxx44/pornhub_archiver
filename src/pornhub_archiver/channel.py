@@ -355,7 +355,7 @@ class Channel:
             "writethumbnail": True,
             "postprocessors": [
                 {"key": "FFmpegMetadata", "add_chapters": True, "add_metadata": True, "add_infojson": "if_exists"},
-                {"key": "EmbedThumbnail", "already_have_thumbnail": False},
+                # {"key": "EmbedThumbnail", "already_have_thumbnail": False},
             ],
         }
 
