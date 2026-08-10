@@ -1,4 +1,4 @@
-FROM python:3.14.6-alpine AS phantomjs
+FROM python:3.15.0rc1-alpine AS phantomjs
 
 ARG PHANTOMJS_VERSION=2.1.1
 
@@ -10,7 +10,7 @@ RUN apk add --no-cache \
     && mv "/tmp/phantomjs-${PHANTOMJS_VERSION}-linux-x86_64/bin/phantomjs" /usr/local/bin/phantomjs \
     && chmod +x /usr/local/bin/phantomjs
 
-FROM python:3.14.6-alpine
+FROM python:3.15.0rc1-alpine
 
 # Runtime behaviour
 ENV PYTHONDONTWRITEBYTECODE=1 \
